@@ -15,6 +15,9 @@ cooldowns = {}
 adm_id = int(os.environ["ADM_ID"])
 mod_id = []
 
+## print envs 
+print(os.environ["TOKEN"])
+
 if os.path.exists('pai_config.json'):
     with open('pai_config.json', 'r') as config_file:
         config = json.load(config_file)

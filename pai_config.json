@@ -1,5 +1,6 @@
 {
   "cooldown": 60,
+  "adm_token": "1169065366241149009",
   "configs": [
     {
       "name": "nubank",
@@ -44,12 +45,6 @@
       "enabled": true,
       "keywords": ["rust"],
       "image_name": "rust-femboy.gif"
-    },
-    {
-      "name": "requisito",
-      "enabled": true,
-      "keywords": ["requisitos", "requisito"],
-      "image_name": "requisito.png"
     }
   ]
 }
