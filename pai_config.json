@@ -45,6 +45,12 @@
       "enabled": true,
       "keywords": ["rust"],
       "image_name": "rust-femboy.gif"
+    },
+    {
+      "name": "contexto",
+      "enabled": true,
+      "keywords": ["contexto"],
+      "image_name": "contexto.jpeg"
     }
   ]
 }
