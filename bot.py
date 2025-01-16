@@ -7,14 +7,12 @@ import re
 import time
 import numpy as np
 
-# Carregar variáveis de ambiente
 load_dotenv()
 
 cooldowns = {}
 adm_id = int(os.getenv("ADM_ID", "0"))
 mod_id = []
 
-# Verificar se o arquivo de configuração existe
 if os.path.exists('pai_config.json'):
     with open('pai_config.json', 'r') as config_file:
         config = json.load(config_file)
@@ -22,7 +20,6 @@ else:
     print('Erro: Arquivo de configuração não encontrado.')
     exit(1)
 
-# Configurações do bot
 COOLDOWN = config.get("cooldown", 120)
 configurations = config.get("configs", [])
 configs_list = [
@@ -46,18 +43,14 @@ def on_cooldown(user_id):
         return False
     return True
 
-# Checagem de flood
 def flood_msg_check():
     return np.random.randint(1, 11) == 1
 
-# Intents do bot
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Instância do bot
-bot = commands.Bot(command_prefix="8===D---", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Evento: Bot está pronto
 @bot.event
 async def on_ready():
     print(f"Logado como {bot.user}")
@@ -67,14 +60,13 @@ async def on_ready():
     except Exception as e:
         print(f"Erro ao sincronizar comandos: {e}")
 
-# Evento: Mensagem recebida
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Eventos: Mensagem recebida
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
-    
-    # verifica se e um comando com 8===D---
-    if message.content.startswith("8===D---"):
+
+    if message.content.startswith("!"):
         await bot.process_commands(message)
         return
 
@@ -123,7 +115,7 @@ async def paidocs(interaction: discord.Interaction):
     documentation = """
 **PAI BOT DOCUMENTAÇÃO**
 
-**Comandos Prefixados (8===D---):**
+**Comandos Prefixados (!):**
 1. `trigger` - Lista todos os gatilhos disponíveis configurados no bot.
 2. `words [nome_do_trigger]` - Exibe informações sobre um trigger específico, como palavras-chave e imagem associada.
 3. `ping` - Retorna a latência atual do bot.
