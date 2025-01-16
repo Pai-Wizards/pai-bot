@@ -1,140 +1,159 @@
 import os
 import discord
 from discord.ext import commands
-from PIL import Image
-import time
-import numpy as np
 from dotenv import load_dotenv
 import json
-import sys
 import re
+import time
+import numpy as np
 
+# Carregar variáveis de ambiente
 load_dotenv()
 
 cooldowns = {}
-adm_id = int(os.environ["ADM_ID"])
+adm_id = int(os.getenv("ADM_ID", "0"))
 mod_id = []
 
-## print envs 
-print(os.environ["TOKEN"])
-
+# Verificar se o arquivo de configuração existe
 if os.path.exists('pai_config.json'):
     with open('pai_config.json', 'r') as config_file:
         config = json.load(config_file)
 else:
-    print('Error: config file not found')
-    sys.exit(1)
+    print('Erro: Arquivo de configuração não encontrado.')
+    exit(1)
 
-# Load cooldown configuration
+# Configurações do bot
 COOLDOWN = config.get("cooldown", 120)
+configurations = config.get("configs", [])
+configs_list = [
+    {
+        "name": cfg.get("name", ""),
+        "enabled": cfg.get("enabled", False),
+        "keywords": cfg.get("keywords", []),
+        "image_name": cfg.get("image_name", ""),
+        "custom_message": cfg.get("custom_message", ""),
+    }
+    for cfg in configurations
+]
 
-# Load configurations
-configurations = config.get("configs")
-
-if configurations is not None:
-    configs_list = [dict({
-        "name": configuration.get("name", ""),
-        "enabled": configuration.get("enabled", False),
-        "keywords": configuration.get("keywords", []),
-        "image_name": configuration.get("image_name", ""),
-        "custom_message": configuration.get("custom_message", "")
-    }) for configuration in configurations]
-
-def on_cooldown(id):
-    if id == adm_id:
+# Função de cooldown
+def on_cooldown(user_id):
+    if user_id == adm_id:
         return False
-    elif id not in cooldowns or (time.time() - cooldowns[id]) > COOLDOWN:
-        # Update the last triggered time
-        cooldowns[id] = time.time()
+    last_trigger = cooldowns.get(user_id, 0)
+    if time.time() - last_trigger > COOLDOWN:
+        cooldowns[user_id] = time.time()
         return False
-    else:
-        return True
+    return True
 
+# Checagem de flood
 def flood_msg_check():
-    choice = np.random.randint(1, 11)
-    if choice == 1:
-        return True
-    else:
-        return False
+    return np.random.randint(1, 11) == 1
 
-# INTENTS
+# Intents do bot
 intents = discord.Intents.default()
-intents.typing = True
-intents.presences = False
 intents.message_content = True
 
-# BOT TOKEN
-TOKEN = os.environ["TOKEN"]
+# Instância do bot
+bot = commands.Bot(command_prefix="8===D---", intents=intents)
 
-# Create a bot instance
-bot = commands.Bot(command_prefix='!', intents=intents)
-
-# ready log
+# Evento: Bot está pronto
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name}')
+    print(f"Logado como {bot.user}")
+    try:
+        await bot.tree.sync()  # Sincroniza comandos de barra
+        print("Comandos slash sincronizados com sucesso!")
+    except Exception as e:
+        print(f"Erro ao sincronizar comandos: {e}")
 
-# Event handler for when a message is received
+# Evento: Mensagem recebida
 @bot.event
 async def on_message(message):
-    print(adm_id == message.author.id) # debug
-    # Ignore messages from the bot itself to prevent a loop
     if message.author == bot.user:
         return
+    
+    # verifica se e um comando com 8===D---
+    if message.content.startswith("8===D---"):
+        await bot.process_commands(message)
+        return
 
-    # adm functions - REFACTORING NEEDED (Probably better w/ slash commands)
     if message.author.id == adm_id:
-        if "modpai" in message.content.lower():
-            if "add" in message.content.lower():
-                id = message.content[-18:]
-                if id not in mod_id:
-                    mod_id.append(id)
-                    await message.reply(f'<@{id}> agora é um mod do papai')
-                else:
-                    await message.reply('ele já é mod seu zé ruela')
-            elif "remove" in message.content.lower():
-                id = message.content[-18:]
-                if id not in mod_id:
-                    await message.reply('ele já não era meu mod')
-                else:
-                    mod_id.remove(id)
-                    await message.reply(f'<@{id}> não é mais mod do papai')
+        if "modpai add" in message.content.lower():
+            user_id = int(message.content.split()[-1])
+            if user_id not in mod_id:
+                mod_id.append(user_id)
+                await message.reply(f"<@{user_id}> agora é um mod do papai")
+            else:
+                await message.reply("Ele já é mod seu zé ruela")
+        elif "modpai remove" in message.content.lower():
+            user_id = int(message.content.split()[-1])
+            if user_id in mod_id:
+                mod_id.remove(user_id)
+                await message.reply(f"<@{user_id}> não é mais mod do papai")
+            else:
+                await message.reply("Ele já não era meu mod")
         elif "pai xp" in message.content.lower():
-            await message.reply('+xp')
+            await message.reply("+xp")
 
     for config_instance in configs_list:
         if config_instance["enabled"]:
-            re_lst = r"\b(?:{})\b".format("|".join(config_instance["keywords"]))
-            match_word = re.search(re_lst, message.content.lower())
+            keywords_regex = r"\b(?:{})\b".format("|".join(config_instance["keywords"]))
+            if re.search(keywords_regex, message.content.lower()) and not on_cooldown(message.author.id):
+                img_path = os.getenv("IMG_PATH", "") + config_instance["image_name"]
+                with open(img_path, "rb") as image_file:
+                    await message.reply(config_instance["custom_message"], file=discord.File(image_file))
+                return
 
-            if match_word and (not on_cooldown(message.author.id)):
-                with open(os.environ['IMG_PATH'] + config_instance["image_name"], 'rb') as image_file:
-                        image = discord.File(image_file)
-                        await message.reply(config_instance["custom_message"], file=image)
-                        return
-            elif match_word and flood_msg_check():
-                await message.reply('para de floodar seu desgraçado')
-
-    # check for mention
-    if bot.user.mentioned_in(message) and (not on_cooldown(message.author.id)):
-        choose = np.random.randint(1, 4)
-        if choose == 1:
-            await message.reply('marca teu cu seu arrombado')
-        elif choose == 2:
-            await message.reply('*fui comprar cigarro, deixe seu recado*')
-        elif choose == 3:
-            await message.reply('pede pra tua mãe, to jogando truco')
-    elif bot.user.mentioned_in(message) and flood_msg_check():
-        await message.reply('para de floodar seu desgraçado')
+    if bot.user.mentioned_in(message):
+        if not on_cooldown(message.author.id):
+            responses = [
+                "marca teu cu seu arrombado",
+                "*fui comprar cigarro, deixe seu recado*",
+                "pede pra tua mãe, to jogando truco",
+            ]
+            await message.reply(np.random.choice(responses))
+        elif flood_msg_check():
+            await message.reply("para de floodar seu desgraçado")
 
     await bot.process_commands(message)
 
-@bot.slash_command(
-    name="paidocs",
-    description="documentação do pai"
-)
-async def paidocs(ctx):
-    await ctx.respond("PAI BOT\n\n*Comandos*\n1- paibot docs: Documentação Oficial do papai")
+@bot.tree.command(name="paidocs", description="documentação do pai")
+async def paidocs(interaction: discord.Interaction):
+    documentation = """
+**PAI BOT DOCUMENTAÇÃO**
 
-# Start the bot
+**Comandos Prefixados (8===D---):**
+1. `trigger` - Lista todos os gatilhos disponíveis configurados no bot.
+2. `words [nome_do_trigger]` - Exibe informações sobre um trigger específico, como palavras-chave e imagem associada.
+3. `ping` - Retorna a latência atual do bot.
+"""
+    await interaction.response.send_message(documentation)
+
+@bot.command()
+async def trigger(ctx):
+    response = "Triggers disponíveis:\n"
+    for config_instance in configs_list:
+        response += f"{config_instance['name']}\n"
+    await ctx.send(response)
+
+@bot.command()
+async def words(ctx, trigger_name):
+    response = "Triggers words disponíveis:\n"
+    print(trigger_name)
+    for config_instance in configs_list:
+        if config_instance["name"] == trigger_name:
+            response += f"Nome do trigger: {config_instance['name']}\n"
+            response += f"Palavras-chave: {', '.join(config_instance['keywords'])}\n"
+            response += f"Imagem: {config_instance['image_name']}\n"
+            response += f"Mensagem: {config_instance['custom_message']}\n"
+    await ctx.send(response)
+
+@bot.command()
+async def ping(ctx):
+    time = round(bot.latency * 1000)
+    await ctx.send('pong {}ms'.format(time))
+
+# Iniciar o bot
+TOKEN = os.getenv("TOKEN")
 bot.run(TOKEN)
