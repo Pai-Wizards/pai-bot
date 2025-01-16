@@ -6,6 +6,7 @@ import json
 import re
 import time
 import numpy as np
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -146,6 +147,53 @@ async def ping(ctx):
     time = round(bot.latency * 1000)
     await ctx.send('pong {}ms'.format(time))
 
-# Iniciar o bot
+
+TAKES_FILE = "take.json"
+
+if not os.path.exists(TAKES_FILE):
+    with open(TAKES_FILE, "w") as f:
+        json.dump({"last_take": None, "record": 0, "total": 0}, f)
+
+def load_takes_json():
+    with open(TAKES_FILE, "r") as f:
+        return json.load(f)
+
+def save_takes_json(data):
+    with open(TAKES_FILE, "w") as f:
+        json.dump(data, f)
+
+def days_since_last_take(last_take):
+    if last_take is None:
+        return 0
+
+    last_take = datetime.fromisoformat(last_take)
+    delta = datetime.now() - last_take
+    return delta.days
+
+@bot.command()
+async def take(ctx):
+    data = load_takes_json()
+    days = days_since_last_take(data["last_take"])
+    record = data["record"]
+
+    await ctx.send(f"ESTAMOS A {days} DIAS SEM TAKE MERDA. \nNOSSO RECORDE É DE {record} DIAS \nTOTAL DE TAKES: {data['total']}")
+
+
+@bot.command()
+async def takemerda(ctx):
+    data = load_takes_json()
+    last_take = data["last_take"]
+    current_days = days_since_last_take(last_take)
+
+    if current_days > data["record"]:
+        data["record"] = current_days
+
+    data["last_take"] = datetime.now().isoformat()
+
+    data["total"] += 1
+    save_takes_json(data)
+
+    await ctx.send(f"ESTAMOS A 0 DIAS SEM TAKE MERDA. \nNOSSO RECORDE É DE {data['record']} DIAS! \nTOTAL DE TAKES: {data['total']}")
+
 TOKEN = os.getenv("TOKEN")
 bot.run(TOKEN)
