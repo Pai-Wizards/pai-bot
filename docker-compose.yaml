@@ -10,10 +10,5 @@ services:
     volumes:
       - ./pai_config.json:/app/pai_config.json
       - ./assets:/app/images
-      - take-data:/app/take.json
+      - ./take.json:/app/take.json
     command: python bot.py
-
-
-volumes:
-  take-data:
-    driver: local
