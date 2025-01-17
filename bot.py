@@ -176,6 +176,9 @@ async def take(ctx):
     days = days_since_last_take(data["last_take"])
     record = data["record"]
 
+    if days > record:
+        record = days
+
     await ctx.send(f"ESTAMOS A {days} DIAS SEM TAKE MERDA. \nNOSSO RECORDE É DE {record} DIAS \nTOTAL DE TAKES: {data['total']}")
 
 
