@@ -7,6 +7,7 @@ import re
 import time
 import numpy as np
 from datetime import datetime, timedelta
+import random
 
 load_dotenv()
 
@@ -147,6 +148,7 @@ async def ping(ctx):
     time = round(bot.latency * 1000)
     await ctx.send('pong {}ms'.format(time))
 
+# ___________________________________________________________________________________
 
 TAKES_FILE = "take.json"
 
@@ -197,6 +199,54 @@ async def takemerda(ctx):
     save_takes_json(data)
 
     await ctx.send(f"ESTAMOS A 0 DIAS SEM TAKE MERDA. \nNOSSO RECORDE É DE {data['record']} DIAS! \nTOTAL DE TAKES: {data['total']}")
+
+@bot.command()
+async def jahpodmussar(ctx):
+    current_date = datetime.now()
+    hora_atual = current_date.strftime("%H:%M")
+
+    frases_almoco = [
+        f"FUI AO MOSSAR",
+        f"Vai comer criatura 🍲",
+        f"Logico que pode, vai comer! 🍲",
+        f"Vai logo meoooo",
+        f"Hoje é dia de comer cu de curioso",
+    ]
+
+    frases_almoco_no_jantar = [
+        f"Almoço às {hora_atual}? organiza essa vida! 🍴",
+        f"Almoço às {hora_atual}? Depois reclama 🌙",
+        f"Pensando em almoço às {hora_atual}? Tá tudo errado aí, hein! 😤",
+        f"Horário de janta ({hora_atual}), e você ainda falando de almoço? Vai comer algo decente agora! 🙄",
+        f"Almoço às {hora_atual}? Tá com fome é? 🍴"
+    ]
+
+    frases_almoco_madrugada = [
+        f"Almoço às {hora_atual}? Vai dormir, criatura! Quem pensa nisso a essa hora? 😴",
+        f"Almoço às {hora_atual}? Depois reclama que tá comendo mal! 🌌",
+        f"Madrugada ({hora_atual}) é pra dormir, não pra ficar sonhando com almoço! 🛌",
+        f"Você tá falando de almoço às {hora_atual}? Tá tudo bem aí? Precisa de ajuda? 🤔",
+        f"Sai do discord e vai dormir, almoço às {hora_atual} é coisa de quem não tem o que fazer! 😴"
+        f"Nao compensa não, vai dormir! 🌙"
+    ]
+
+    frases_padrão = [
+        f"Ainda não está liberado, mas tá preocupado com o almoço às {hora_atual}? Vai se organizar! 🙄",
+        f"Pode nao meo",
+        f"Almoço às {hora_atual} Organize sua vida! 🕰️"
+    ]
+
+    # Determinar a resposta com base no horário
+    if 11 <= current_date.hour <= 14:
+        await ctx.send(random.choice(frases_almoco))
+    elif 18 <= current_date.hour <= 22:
+        await ctx.send(random.choice(frases_almoco_no_jantar))
+    elif 23 <= current_date.hour or current_date.hour <= 5:
+        await ctx.send(random.choice(frases_almoco_madrugada))
+    else:
+        await ctx.send(random.choice(frases_padrão))
+
+
 
 TOKEN = os.getenv("TOKEN")
 bot.run(TOKEN)
