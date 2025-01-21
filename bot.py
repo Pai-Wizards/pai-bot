@@ -8,6 +8,7 @@ import time
 import numpy as np
 from datetime import datetime, timedelta
 import random
+from discord.ext import tasks
 
 load_dotenv()
 
@@ -61,6 +62,9 @@ async def on_ready():
         print("Comandos slash sincronizados com sucesso!")
     except Exception as e:
         print(f"Erro ao sincronizar comandos: {e}")
+
+    if not check_record.is_running():
+        check_record.start()
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Eventos: Mensagem recebida
 @bot.event
@@ -245,6 +249,42 @@ async def jahpodmussar(ctx):
         await ctx.send(random.choice(frases_almoco_madrugada))
     else:
         await ctx.send(random.choice(frases_padrão))
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Tasks
+
+@tasks.loop(hours=24)
+async def check_record():
+    channel_id = int(os.getenv("ANNOUNCE_CHANNEL_ID", "0"))
+    print(channel_id)
+    print("Checking record...")
+    if channel_id == 0:
+        print("Erro: ANNOUNCE_CHANNEL_ID não configurado.")
+        return
+
+    data = load_takes_json()
+    days = days_since_last_take(data["last_take"])
+    record = data["record"]
+
+    print(f"Dias sem take merda: {days}")
+    print(f"Recorde atual: {record}")
+
+    if days > record:
+        print("Novo recorde de dias sem take merda!")
+        data["record"] = days
+        save_takes_json(data)
+
+        channel = bot.get_channel(channel_id)
+        print(channel)
+        if channel:
+            print("Enviando mensagem de recorde...")
+            await channel.send(
+                f"🎉 NOVO RECORDE DE {days} DIAS SEM TAKE MERDA! 🎉\n"
+                f"COLABORE PARA MELHORAR ESSE INDICE!"
+            )
+        else:
+            print("Erro: Canal de anúncio {} não encontrado.".format(channel_id))
+    else:
+        print("Nenhum recorde batido.")
 
 
 
