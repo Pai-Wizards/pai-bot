@@ -31,10 +31,20 @@ class Commands(commands.Cog):
         await ctx.send(response)
 
     @commands.command()
+    async def dog(self, ctx, dog):
+        description, url, image_url = await fetch_http_dog_image(dog, True)
+        if not url or not description:
+            await ctx.send("ih rapaz, deu ruim")
+        embed = discord.Embed(description=description)
+
+        embed.set_image(url=image_url)
+        await ctx.message.reply(embed=embed)
+
+    @commands.command()
     async def http(self, ctx, http):
         description, url = await fetch_mdn_description(http)
         if not description:
-            description, url, image_url = await fetch_http_dog_image(http)
+            description, url, image_url = await fetch_http_dog_image(http, False)
             if not url or not description:
                 await ctx.send("ih rapaz, deu ruim")
             embed = discord.Embed(description=description)

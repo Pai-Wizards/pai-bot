@@ -4,13 +4,22 @@ import re
 import requests
 
 
-async def fetch_http_dog_image(http):
-    image_jpg = f'https://http.dog/' + http + '.jpg'
+async def fetch_http_dog_image(http, flag):
+    json_url = f'https://http.dog/{http}.json'
+    image_jpg = f'https://http.dog/{http}.jpg'
     url = f'https://http.dog/{http}'
-    response = requests.get(url)
-    if response.status_code == 200:
-        description = "nao achei no mdn"
-        return description, url, image_jpg
+
+    try:
+        # Tentar obter o JSON
+        response = requests.get(json_url)
+        if response.status_code == 200:
+            data = response.json()
+            title = data.get("title", "Título não encontrado")
+            description = title if flag else "nao achei no mdn"
+            return description, url, image_jpg
+    except Exception as e:
+        print(f"Erro ao buscar dados: {e}")
+
     return None, None, None
 
 
