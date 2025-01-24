@@ -1,10 +1,10 @@
+import html
+import re
 from datetime import datetime
 
+import requests
 from discord.ext import commands
 from numpy.random import choice
-
-import re
-import requests
 
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
@@ -35,11 +35,17 @@ class Commands(commands.Cog):
     @commands.command()
     async def http(self, ctx, http):
         response = requests.get('https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/' + http)
+
         if response.status_code == 200:
-            match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']\s*/?>' , response.content.decode())
+            match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']\s*/?>',
+                              response.content.decode('utf-8', errors='ignore'))
 
-
-            await ctx.send(match.group(1) + "\n\n" + response.url)
+            if match:
+                description = match.group(1)
+                decoded_description = html.unescape(description)
+                await ctx.send(decoded_description + "\n\n" + response.url)
+            else:
+                await ctx.send("Ihh rapaz, deu ruim aqui")
         else:
             await ctx.send('Achei nada vai se tratar')
 
@@ -131,6 +137,7 @@ class Commands(commands.Cog):
     @commands.command(name="taxado")
     async def taxado(self, ctx):
         await ctx.send("TODO: taxado ta pronto nao meu patrao")
+
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
