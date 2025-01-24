@@ -35,13 +35,13 @@ class Commands(commands.Cog):
         description, url = await fetch_mdn_description(http)
         if not description:
             description, url, image_url = await fetch_http_dog_image(http)
+            if not url or not description:
+                await ctx.send("ih rapaz, deu ruim")
             embed = discord.Embed(description=description)
 
             embed.set_image(url=image_url)
             await ctx.message.reply(embed=embed)
         else:
-            if not url or not description:
-                await ctx.send("ih rapaz, deu ruim")
             await ctx.send(f"{description}\n{url}")
 
     @commands.command()
