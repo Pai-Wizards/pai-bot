@@ -7,9 +7,11 @@ import requests
 async def fetch_http_dog_image(http):
     image_jpg = f'https://http.dog/' + http + '.jpg'
     url = f'https://http.dog/{http}'
-
-    description = "nao achei no mdn"
-    return description, url, image_jpg
+    response = requests.get(url)
+    if response.status_code == 200:
+        description = "nao achei no mdn"
+        return description, url, image_jpg
+    return None, None, None
 
 
 async def fetch_mdn_description(http):
