@@ -112,9 +112,11 @@ class Commands(commands.Cog):
 
     @commands.command(name="pillfoda")
     async def pillfoda(self, ctx):
-        await ctx.send("TAXADO")
-        data = load_takes_json()
+        await ctx.send("TODO: pillfoda ta pronto nao meu patrao")
 
+    @commands.command(name="taxado")
+    async def taxado(self, ctx):
+        await ctx.send("TODO: taxado ta pronto nao meu patrao")
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
