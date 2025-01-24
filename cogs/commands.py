@@ -3,6 +3,9 @@ from datetime import datetime
 from discord.ext import commands
 from numpy.random import choice
 
+import re
+import requests
+
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 
@@ -28,6 +31,17 @@ class Commands(commands.Cog):
                 response += f"Imagem: {config_instance['image_name']}\n"
                 response += f"Mensagem: {config_instance['custom_message']}\n"
         await ctx.send(response)
+
+    @commands.command()
+    async def http(self, ctx, http):
+        response = requests.get('https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/' + http)
+        if response.status_code == 200:
+            match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']\s*/?>' , response.content.decode())
+
+
+            await ctx.send(match.group(1) + "\n\n" + response.url)
+        else:
+            await ctx.send('Achei nada vai se tratar')
 
     @commands.command()
     async def ping(self, ctx):
