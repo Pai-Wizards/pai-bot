@@ -9,6 +9,7 @@ from config import config_loader as cl
 
 config_file = cl.load_config()
 configs_list = cl.get_configs(config_file)
+almoco_frases_list = cl.create_almoco_config(config_file)
 
 load_dotenv()
 
@@ -18,6 +19,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 bot.configs_list = configs_list
+bot.almoco_list = almoco_frases_list
 
 COGS = ["cogs.commands", "cogs.events", "cogs.tasks"]
 

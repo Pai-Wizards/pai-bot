@@ -1,11 +1,10 @@
-import html
-import re
 from datetime import datetime
 
-import requests
+import discord
 from discord.ext import commands
 from numpy.random import choice
 
+from utils.http import fetch_mdn_description, fetch_http_dog_image
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 
@@ -15,7 +14,6 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def trigger(self, ctx):
-        # Verifica se o comando já foi processado
         response = "Triggers disponíveis:\n"
         for config_instance in self.bot.configs_list:
             response += f"{config_instance['name']}\n"
@@ -34,20 +32,15 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def http(self, ctx, http):
-        response = requests.get('https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/' + http)
+        description, url = await fetch_mdn_description(http)
+        if not description:
+            description, url, image_url = await fetch_http_dog_image(http)
+            embed = discord.Embed(description=description)
 
-        if response.status_code == 200:
-            match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']\s*/?>',
-                              response.content.decode('utf-8', errors='ignore'))
-
-            if match:
-                description = match.group(1)
-                decoded_description = html.unescape(description)
-                await ctx.send(decoded_description + "\n\n" + response.url)
-            else:
-                await ctx.send("Ihh rapaz, deu ruim aqui")
+            embed.set_image(url=image_url)
+            await ctx.message.reply(embed=embed)
         else:
-            await ctx.send('Achei nada vai se tratar')
+            await ctx.send("Ihh rapaz, deu ruim aqui" if url else 'Achei nada vai se tratar')
 
     @commands.command()
     async def ping(self, ctx):
@@ -86,49 +79,24 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def jahpodmussar(self, ctx):
+        print("jahpodmussar commando")
         current_date = datetime.now()
         hora_atual = current_date.strftime("%H:%M")
 
-        frases_almoco = [
-            "FUI AO MOSSAR",
-            "Vai comer criatura 🍲",
-            "Lógico que pode, vai comer! 🍲",
-            "Vai logo meoooo",
-            "Hoje é dia de comer cu de curioso",
-        ]
+        horario_map = {
+            (11, 14): self.bot.almoco_list["frases_almoco"],
+            (18, 22): self.bot.almoco_list["frases_almoco_no_jantar"],
+            (23, 5): self.bot.almoco_list["frases_almoco_madrugada"],
+        }
+        frases_selecionadas = self.bot.almoco_list["frases_padrao"]
+        for (inicio, fim), frases in horario_map.items():
+            if inicio <= current_date.hour <= fim or (
+                    inicio > fim and (current_date.hour >= inicio or current_date.hour <= fim)):
+                frases_selecionadas = frases
+                break
 
-        frases_almoco_no_jantar = [
-            f"Almoço às {hora_atual}? Organiza essa vida! 🍴",
-            f"Almoço às {hora_atual}? Depois reclama 🌙",
-            f"Pensando em almoço às {hora_atual}? Tá tudo errado aí, hein! 😤",
-            f"Horário de janta ({hora_atual}), e você ainda falando de almoço? Vai comer algo decente agora! 🙄",
-            f"Almoço às {hora_atual}? Tá com fome é? 🍴",
-        ]
-
-        frases_almoco_madrugada = [
-            f"Almoço às {hora_atual}? Vai dormir, criatura! Quem pensa nisso a essa hora? 😴",
-            f"Almoço às {hora_atual}? Depois reclama que tá comendo mal! 🌌",
-            f"Madrugada ({hora_atual}) é pra dormir, não pra ficar sonhando com almoço! 🛌",
-            f"Você tá falando de almoço às {hora_atual}? Tá tudo bem aí? Precisa de ajuda? 🤔",
-            f"Sai do Discord e vai dormir, almoço às {hora_atual} é coisa de quem não tem o que fazer! 😴",
-            "Não compensa não, vai dormir! 🌙",
-        ]
-
-        frases_padrao = [
-            f"Ainda não está liberado, mas tá preocupado com o almoço às {hora_atual}? Vai se organizar! 🙄",
-            "Pode não, meo.",
-            f"Almoço às {hora_atual}? Organize sua vida! 🕰️",
-        ]
-
-        # Determinar a resposta com base no horário
-        if 11 <= current_date.hour <= 14:
-            await ctx.send(choice(frases_almoco))
-        elif 18 <= current_date.hour <= 22:
-            await ctx.send(choice(frases_almoco_no_jantar))
-        elif 23 <= current_date.hour or current_date.hour <= 5:
-            await ctx.send(choice(frases_almoco_madrugada))
-        else:
-            await ctx.send(choice(frases_padrao))
+        frase = choice(frases_selecionadas).format(hora_atual=hora_atual)
+        await ctx.send(frase)
 
     @commands.command(name="pillfoda")
     async def pillfoda(self, ctx):

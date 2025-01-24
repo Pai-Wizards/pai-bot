@@ -1,5 +1,34 @@
 {
   "cooldown": 60,
+  "almoco_frases": {
+    "frases_almoco": [
+      "FUI AO MOSSAR",
+      "Vai comer criatura 🍲",
+      "Lógico que pode, vai comer! 🍲",
+      "Vai logo meoooo",
+      "Hoje é dia de comer cu de curioso"
+    ],
+    "frases_almoco_no_jantar": [
+      "Almoço às {hora_atual}? Organiza essa vida! 🍴",
+      "Almoço às {hora_atual}? Depois reclama 🌙",
+      "Pensando em almoço às {hora_atual}? Tá tudo errado aí, hein! 😤",
+      "Horário de janta ({hora_atual}), e você ainda falando de almoço? Vai comer algo decente agora! 🙄",
+      "Almoço às {hora_atual}? Tá com fome é? 🍴"
+    ],
+    "frases_almoco_madrugada": [
+      "Almoço às {hora_atual}? Vai dormir, criatura! Quem pensa nisso a essa hora? 😴",
+      "Almoço às {hora_atual}? Depois reclama que tá comendo mal! 🌌",
+      "Madrugada ({hora_atual}) é pra dormir, não pra ficar sonhando com almoço! 🛌",
+      "Você tá falando de almoço às {hora_atual}? Tá tudo bem aí? Precisa de ajuda? 🤔",
+      "Sai do Discord e vai dormir, almoço às {hora_atual} é coisa de quem não tem o que fazer! 😴",
+      "Não compensa não, vai dormir! 🌙"
+    ],
+    "frases_padrao": [
+      "Ainda não está liberado, mas tá preocupado com o almoço às {hora_atual}? Vai se organizar! 🙄",
+      "Pode não, meo.",
+      "Almoço às {hora_atual}? Organize sua vida! 🕰️"
+    ]
+  },
   "configs": [
     {
       "name": "nubank",

@@ -12,6 +12,17 @@ def load_config():
         raise FileNotFoundError("Arquivo de configuração 'pai_config.json' não encontrado.")
 
 
+
+def create_almoco_config(config):
+    almoco_frases = config.get("almoco_frases", {})
+    return {
+        "frases_almoco": almoco_frases.get("frases_almoco", []),
+        "frases_almoco_no_jantar": almoco_frases.get("frases_almoco_no_jantar", []),
+        "frases_almoco_madrugada": almoco_frases.get("frases_almoco_madrugada", []),
+        "frases_padrao": almoco_frases.get("frases_padrao", [])
+    }
+
+
 def get_configs(config):
     configurations = config.get("configs", [])
     cooldown = config.get("cooldown", 0)
