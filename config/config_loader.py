@@ -1,10 +1,12 @@
 import json
 import os
 
+import config.settings
+
 
 def load_config():
     if os.path.exists("pai_config.json"):
-        with open("pai_config.json", "r") as file:
+        with open(config.settings.CONFIG_FILE, "r") as file:
             print("Arquivo de configuração 'pai_config.json' encontrado.")
             return json.load(file)
     else:

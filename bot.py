@@ -1,11 +1,10 @@
 import asyncio
-import os
 
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from config import config_loader as cl
+from config import config_loader as cl, settings
 
 config_file = cl.load_config()
 configs_list = cl.get_configs(config_file)
@@ -40,8 +39,7 @@ async def on_ready():
 
 async def main():
     await load_extensions(bot)
-    TOKEN = os.getenv("TOKEN")
-    await bot.start(TOKEN)
+    await bot.start(settings.TOKEN)
 
 
 if __name__ == "__main__":

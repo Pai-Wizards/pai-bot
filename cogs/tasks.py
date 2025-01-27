@@ -1,6 +1,6 @@
 from discord.ext import tasks, commands
-import os
 
+import config.settings
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 
@@ -13,7 +13,7 @@ class Tasks(commands.Cog):
     @tasks.loop(hours=12)
     async def check_record(self):
         print("Executando task check_record")
-        channel_id = int(os.getenv("ANNOUNCE_CHANNEL_ID", "0"))
+        channel_id = int(config.settings.ANNOUNCE_CHANNEL_ID)
         if channel_id == 0:
             return
 

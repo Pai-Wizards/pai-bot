@@ -2,7 +2,7 @@ import json
 
 from datetime import datetime
 
-TAKES_FILE = "take.json"
+from config.settings import TAKES_FILE
 
 
 def load_takes_json():

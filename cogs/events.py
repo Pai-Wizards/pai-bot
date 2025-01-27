@@ -1,4 +1,3 @@
-import os
 import re
 
 import aiohttp
@@ -6,6 +5,7 @@ import discord
 import numpy as np
 from discord.ext import commands
 
+import config.settings
 from utils.cooldown import on_cooldown
 
 
@@ -32,7 +32,7 @@ class Events(commands.Cog):
                 if re.search(keywords_regex, message.content.lower()) and not on_cooldown(message.author.id,
                                                                                           self.bot.configs_list[
                                                                                               "cooldown"]):
-                    img_path = os.getenv("IMG_PATH", "") + config_instance["image_name"]
+                    img_path = config.settings.IMG_PATH + config_instance["image_name"]
                     print("Palavra-chave encontrada: {config_instance['name']}")
                     with open(img_path, "rb") as image_file:
                         print(f"Enviando imagem {img_path}")
