@@ -10,27 +10,40 @@ class Tasks(commands.Cog):
         if not self.check_record.is_running():
             self.check_record.start()
 
-    @tasks.loop(hours=12)
+    @tasks.loop(hours=4)
     async def check_record(self):
         print("Executando task check_record")
         channel_id = int(config.settings.ANNOUNCE_CHANNEL_ID)
         if channel_id == 0:
             return
 
+        await self.handle_record(
+            channel_id=channel_id,
+            take_type="take merda",
+            message_template=(
+                "🎉 NOVO RECORDE DE {days} DIAS SEM TAKE MERDA! 🎉\n"
+                "COLABORE PARA MELHORAR ESSE ÍNDICE!"
+            ),
+        )
+
+    async def handle_record(self, channel_id: int, take_type: str, message_template: str):
         data = load_takes_json()
-        days = days_since_last_take(data["last_take"])
-        record = data["record"]
+
+        if take_type not in data:
+            return
+
+        take_data = data[take_type]
+        days = days_since_last_take(take_data["last_take"]) if take_data["last_take"] else 0
+        record = take_data["record"]
 
         if days > record:
-            data["record"] = days
+            take_data["record"] = days
             save_takes_json(data)
 
             channel = self.bot.get_channel(channel_id)
             if channel:
-                await channel.send(
-                    f"🎉 NOVO RECORDE DE {days} DIAS SEM TAKE MERDA! 🎉\n"
-                    f"COLABORE PARA MELHORAR ESSE INDICE!"
-                )
+                message = message_template.format(days=days)
+                await channel.send(message)
 
     @check_record.before_loop
     async def before_check_record(self):
