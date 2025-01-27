@@ -8,6 +8,34 @@ from utils.http import fetch_mdn_description, fetch_http_dog_image
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 
+async def generic_take(ctx, take_type: str):
+    data = load_takes_json()
+
+    if take_type not in data:
+        data[take_type] = {
+            "last_take": None,
+            "record": 0,
+            "total": 0
+        }
+
+    take_data = data[take_type]
+    last_take = take_data["last_take"]
+    current_days = days_since_last_take(last_take) if last_take else 0
+
+    if current_days > take_data["record"]:
+        take_data["record"] = current_days
+
+    take_data["last_take"] = datetime.now().isoformat()
+    take_data["total"] += 1
+    save_takes_json(data)
+
+    await ctx.send(
+        f"ESTAMOS A 0 DIAS SEM {take_type.upper()}. \n"
+        f"NOSSO RECORDE É DE {take_data['record']} DIAS! \n"
+        f"TOTAL DE {take_type.upper()}: {take_data['total']}"
+    )
+
+
 class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -112,11 +140,11 @@ class Commands(commands.Cog):
 
     @commands.command(name="pillfoda")
     async def pillfoda(self, ctx):
-        await ctx.send("TODO: pillfoda ta pronto nao meu patrao")
+        await generic_take(ctx, "pillfoda")
 
     @commands.command(name="taxado")
     async def taxado(self, ctx):
-        await ctx.send("TODO: taxado ta pronto nao meu patrao")
+        await generic_take(ctx, "taxado")
 
 
 async def setup(bot):
