@@ -90,32 +90,29 @@ class Commands(commands.Cog):
     @commands.command()
     async def take(self, ctx):
         data = load_takes_json()
-        days = days_since_last_take(data["last_take"])
-        record = data["record"]
 
-        if days > record:
-            record = days
+        response = "STATUS DOS TAKES:\n"
 
-        await ctx.send(
-            f"ESTAMOS A {days} DIAS SEM TAKE MERDA. \nNOSSO RECORDE É DE {record} DIAS \nTOTAL DE TAKES: {data['total']}"
-        )
+        for take_type, take_data in data.items():
+            if not isinstance(take_data, dict):
+                continue
+
+            days = days_since_last_take(take_data["last_take"]) if take_data["last_take"] else "N/A"
+            record = take_data["record"]
+            total = take_data["total"]
+
+            response += (
+                f"\n{take_type.upper()}:\n"
+                f" - Dias sem: {days}\n"
+                f" - Recorde: {record} dias\n"
+                f" - Total: {total}\n"
+            )
+
+        await ctx.send(response)
 
     @commands.command()
     async def takemerda(self, ctx):
-        data = load_takes_json()
-        last_take = data["last_take"]
-        current_days = days_since_last_take(last_take)
-
-        if current_days > data["record"]:
-            data["record"] = current_days
-
-        data["last_take"] = datetime.now().isoformat()
-        data["total"] += 1
-        save_takes_json(data)
-
-        await ctx.send(
-            f"ESTAMOS A 0 DIAS SEM TAKE MERDA. \nNOSSO RECORDE É DE {data['record']} DIAS! \nTOTAL DE TAKES: {data['total']}"
-        )
+        await generic_take(ctx, "take merda")
 
     @commands.command()
     async def jahpodmussar(self, ctx):
