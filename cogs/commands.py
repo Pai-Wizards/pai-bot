@@ -1,8 +1,8 @@
 from datetime import datetime
+from random import choice
 
 import discord
 from discord.ext import commands
-from numpy.random import choice
 
 from utils.http import fetch_mdn_description, fetch_http_dog_image
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json

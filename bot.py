@@ -1,10 +1,20 @@
 import asyncio
-
+import logging
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
 from config import config_loader as cl, settings
+
+bot_logger = logging.getLogger("bot_logger")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("bot.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
 
 config_file = cl.load_config()
 configs_list = cl.get_configs(config_file)
@@ -27,18 +37,19 @@ async def load_extensions(bot):
     for cog in COGS:
         try:
             await bot.load_extension(cog)
-            print(f"Carregando cog: {cog}")
+            bot_logger.info(f"Carregado cog: {cog}")
         except Exception as e:
-            print(f"Falha ao carregar cog {cog}: {e}")
+            bot_logger.error(f"Falha ao carregar cog {cog}: {e}", exc_info=True)
 
 
 @bot.event
 async def on_ready():
-    print(f"Bot online como {bot.user}")
+    bot_logger.info(f"Bot online como {bot.user}")
 
 
 async def main():
     await load_extensions(bot)
+    bot_logger.info("Iniciando bot...")
     await bot.start(settings.TOKEN)
 
 
@@ -46,7 +57,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Bot foi interrompido pelo usuário (Ctrl+C). Desconectando...")
+        bot_logger.warning("Bot foi interrompido pelo usuário (Ctrl+C). Desconectando...")
         asyncio.run(bot.close())
     except Exception as e:
-        print(f"Ocorreu um erro inesperado: {e}")
+        bot_logger.critical(f"Ocorreu um erro inesperado: {e}", exc_info=True)

@@ -1,16 +1,18 @@
 import json
 import os
+import logging
 
 import config.settings
 
+logger = logging.getLogger("bot_logger")
 
 def load_config():
     if os.path.exists("pai_config.json"):
         with open(config.settings.CONFIG_FILE, "r") as file:
-            print("Arquivo de configuração 'pai_config.json' encontrado.")
+            logger.info("Arquivo de configuração 'pai_config.json' encontrado.")
             return json.load(file)
     else:
-        print("Arquivo de configuração 'pai_config.json' não encontrado.")
+        logger.error("Arquivo de configuração 'pai_config.json' não encontrado.")
         raise FileNotFoundError("Arquivo de configuração 'pai_config.json' não encontrado.")
 
 

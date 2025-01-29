@@ -1,8 +1,9 @@
 from discord.ext import tasks, commands
-
+import logging
 import config.settings
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
+logger = logging.getLogger("bot_logger")
 
 class Tasks(commands.Cog):
     def __init__(self, bot):
@@ -12,7 +13,7 @@ class Tasks(commands.Cog):
 
     @tasks.loop(hours=4)
     async def check_record(self):
-        print("Executando task check_record")
+        logger.info("Executando task check_record")
         channel_id = int(config.settings.ANNOUNCE_CHANNEL_ID)
         if channel_id == 0:
             return

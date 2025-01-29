@@ -1,7 +1,11 @@
 import html
 import re
 
+import aiohttp
 import requests
+import logging
+
+logger = logging.getLogger("bot_logger")
 
 
 async def fetch_http_dog_image(http, flag):
@@ -10,7 +14,6 @@ async def fetch_http_dog_image(http, flag):
     url = f'https://http.dog/{http}'
 
     try:
-        # Tentar obter o JSON
         response = requests.get(json_url)
         if response.status_code == 200:
             data = response.json()
@@ -18,7 +21,7 @@ async def fetch_http_dog_image(http, flag):
             description = title if flag else "nao achei no mdn"
             return description, url, image_jpg
     except Exception as e:
-        print(f"Erro ao buscar dados: {e}")
+        logger.info(f"Erro ao buscar dados: {e}")
 
     return None, None, None
 
@@ -46,3 +49,8 @@ async def fetch_generic_description(http, base_url, pattern):
             description = match.group(1)
             return html.unescape(description), url
     return None, url
+
+async def xingar():
+    async with aiohttp.ClientSession() as session:
+        async with session.get("http://xinga-me.appspot.com/api") as response:
+            return (await response.json())["xingamento"]
