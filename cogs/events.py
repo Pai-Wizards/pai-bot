@@ -41,7 +41,7 @@ class Events(commands.Cog):
                         logger.info(f"Enviando imagem {img_path} devido a deleção excessiva de mensagens por {message.author} no canal {message.channel.name}")
                         self.deleted_messages[user_id].clear()
                         alert_channel = message.channel
-                        await alert_channel.send("Começou o deletepill", file=discord.File(image_file))
+                        await alert_channel.send(f"{message.author.mention}  Começou com deletepill", file=discord.File(image_file))
                 except Exception as e:
                     logger.error(f"Erro ao enviar imagem de alerta: {e}")
 
