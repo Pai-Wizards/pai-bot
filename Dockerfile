@@ -5,8 +5,6 @@ COPY . .
 RUN pip install --no-cache-dir --no-compile --prefix=/install -r requirements.txt
 
 FROM python:3.11.5-alpine3.18
-RUN adduser -D bot
-USER bot
 WORKDIR /app
 ENV TZ=America/Sao_Paulo
 COPY --from=builder /install /usr/local
