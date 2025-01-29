@@ -2,6 +2,5 @@ discord.py~=2.4.0
 psutil
 python-dotenv~=1.0.1
 Pillow
-numpy~=2.2.1
 aiohttp~=3.11.11
 requests~=2.32.3
