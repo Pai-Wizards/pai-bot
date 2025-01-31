@@ -64,7 +64,7 @@ class Commands(commands.Cog):
             mensagem_url = referenced_message.jump_url
 
             citacao = (
-                f"{conteudo} (@{ctx.message.author.mention}, 2025)\n\n"
+                f"{conteudo} ({ctx.message.author.mention}, 2025)\n\n"
                 f"{ctx.message.author.mention}. **Mensagem em [{canal_nome}]**, 2025.\n"
                 f"*{servidor_nome}*. Discord, {data_formatada}. Disponível em: [{mensagem_url}]\n"
                 f"Acesso em: {data_formatada}."
