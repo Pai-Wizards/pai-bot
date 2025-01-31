@@ -58,14 +58,15 @@ class Commands(commands.Cog):
                 return
 
             conteudo = referenced_message.content
+            autor_id = referenced_message.author.mention
             canal_nome = ctx.channel.name
             servidor_nome = ctx.guild.name
             data_formatada = datetime.now().strftime("%Y")
             mensagem_url = referenced_message.jump_url
 
             citacao = (
-                f"{conteudo} ({ctx.message.author.mention}, 2025)\n\n"
-                f"{ctx.message.author.mention}. **Mensagem em [{canal_nome}]**, 2025.\n"
+                f"{conteudo} ({autor_id}, 2025)\n\n"
+                f"{autor_id}. **Mensagem em [{canal_nome}]**, 2025.\n"
                 f"*{servidor_nome}*. Discord, {data_formatada}. Disponível em: [{mensagem_url}]\n"
                 f"Acesso em: {data_formatada}."
             )
