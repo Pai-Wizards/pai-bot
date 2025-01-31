@@ -41,6 +41,49 @@ class Commands(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    async def citar(self, ctx):
+        if not ctx.message.reference:
+            await ctx.send("Nao consigo", delete_after=10)
+            return
+
+        try:
+            referenced_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+
+            if referenced_message.author.bot:
+                await ctx.send("Nao sei", delete_after=10)
+                return
+
+            if not referenced_message.content.strip():
+                await ctx.send("Nao consigo", delete_after=10)
+                return
+
+            conteudo = referenced_message.content
+            canal_nome = ctx.channel.name
+            servidor_nome = ctx.guild.name
+            data_formatada = datetime.now().strftime("%Y")
+            mensagem_url = referenced_message.jump_url
+
+            citacao = (
+                f"{conteudo} (@{ctx.message.author.mention}, 2025)\n\n"
+                f"{ctx.message.author.mention}. **Mensagem em [{canal_nome}]**, 2025.\n"
+                f"*{servidor_nome}*. Discord, {data_formatada}. Disponível em: [{mensagem_url}]\n"
+                f"Acesso em: {data_formatada}."
+            )
+
+            await ctx.send(citacao)
+
+        except discord.NotFound:
+            return
+            # await ctx.send("Não foi possível encontrar a mensagem referenciada.", delete_after=10)
+        except discord.Forbidden:
+            return
+            # await ctx.send("Não tenho permissão para acessar essa mensagem.", delete_after=10)
+        except discord.HTTPException:
+            return
+            # await ctx.send("Ocorreu um erro ao recuperar a mensagem.", delete_after=10)
+
+
+    @commands.command()
     async def trigger(self, ctx):
         response = "Triggers disponíveis:\n"
         for config_instance in self.bot.configs_list:
