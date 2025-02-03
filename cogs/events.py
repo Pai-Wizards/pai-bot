@@ -28,6 +28,9 @@ class Events(commands.Cog):
             user_id = message.author.id
             now = datetime.datetime.now()
 
+            if message.author == self.bot.user:
+                return
+
             self.deleted_messages[user_id].append(now)
 
             self.deleted_messages[user_id] = [
