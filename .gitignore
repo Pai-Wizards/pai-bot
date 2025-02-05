@@ -57,6 +57,10 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Audio 
+*.wav
+*.mp3
+
 # Translations
 *.mo
 *.pot

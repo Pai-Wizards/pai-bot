@@ -5,6 +5,8 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from config import config_loader as cl, settings
+from datetime import datetime
+import locale
 
 bot_logger = logging.getLogger("bot_logger")
 logging.basicConfig(
@@ -14,6 +16,9 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+
+locale.setlocale(locale.LC_TIME, "pt_BR.utf8")
 
 config_file = cl.load_config()
 configs_list = cl.get_configs(config_file)
