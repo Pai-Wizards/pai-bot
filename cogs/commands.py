@@ -4,8 +4,9 @@ from random import choice
 import discord
 from discord.ext import commands
 
-from utils.http import fetch_mdn_description, fetch_http_dog_image
+from utils.http import fetch_mdn_description, fetch_http_dog_image, logger
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
+import config.settings
 
 async def generic_take(ctx, take_type: str):
     data = load_takes_json()
@@ -84,6 +85,15 @@ class Commands(commands.Cog):
         except discord.HTTPException:
             return
             # await ctx.send("Ocorreu um erro ao recuperar a mensagem.", delete_after=10)
+
+    @commands.command()
+    async def javascript(self, ctx):
+        img_path = config.settings.IMG_PATH + "javascript.png"
+        try:
+            with open(img_path, "rb") as image_file:
+                await ctx.send(file=discord.File(image_file))
+        except Exception as e:
+            logger.error(f"Erro ao enviar imagem de alerta: {e}")
 
 
     @commands.command()
