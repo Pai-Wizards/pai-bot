@@ -17,7 +17,6 @@ logging.basicConfig(
     ]
 )
 
-
 locale.setlocale(locale.LC_TIME, "pt_BR.utf8")
 
 config_file = cl.load_config()
@@ -29,7 +28,7 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents, case_insensitive=True)
 
 bot.configs_list = configs_list
 bot.almoco_list = almoco_frases_list
