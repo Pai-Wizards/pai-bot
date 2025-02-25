@@ -130,6 +130,9 @@ class Commands(commands.Cog):
         image_url = f'https://http.cat/{http_code}.jpg'
 
         try:
+            if requests.get(image_url).status_code != 200:
+                await ctx.send("nao tem gatiho pra esse codigo")
+                return
             embed = discord.Embed(description=f"HTTP Cat {http_code}")
             embed.set_image(url=image_url)
             await ctx.message.reply(embed=embed)
