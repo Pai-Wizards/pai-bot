@@ -2,6 +2,7 @@ from datetime import datetime
 from random import choice
 
 import discord
+import requests
 from discord.ext import commands
 
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger
@@ -123,6 +124,18 @@ class Commands(commands.Cog):
 
         embed.set_image(url=image_url)
         await ctx.message.reply(embed=embed)
+    
+    @commands.command(description="HTTP Cat")
+    async def cat(self, ctx, http_code):
+        image_url = f'https://http.cat/{http_code}.jpg'
+
+        try:
+            embed = discord.Embed(description=f"HTTP Cat {http_code}")
+            embed.set_image(url=image_url)
+            await ctx.message.reply(embed=embed)
+        except Exception as e:
+            logger.info(f"Erro ao buscar dados: {e}")
+            await ctx.send("ih rapaz, deu ruim")
 
     @commands.command()
     async def http(self, ctx, http):
