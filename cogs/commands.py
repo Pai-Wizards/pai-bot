@@ -5,7 +5,7 @@ import discord
 import requests
 from discord.ext import commands
 
-from utils.http import fetch_mdn_description, fetch_http_dog_image, logger
+from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 import config.settings
 
@@ -184,6 +184,10 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def takemerda(self, ctx):
+        if ctx.message.reference:
+            referenced_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            palavrao = await xingar()
+            await ctx.send(f" {referenced_message.author.mention} { palavrao}")
         await generic_take(ctx, "take merda")
 
     @commands.command()
