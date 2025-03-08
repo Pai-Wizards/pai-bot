@@ -42,6 +42,41 @@ class Commands(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    async def join(self, ctx):
+        if ctx.author.voice is None:
+            await ctx.send("Você não está em um canal de voz.")
+            return
+
+        voice_channel = ctx.author.voice.channel
+
+        if ctx.voice_client is not None:
+            await ctx.voice_client.move_to(voice_channel)
+        else:
+            await voice_channel.connect()
+
+        await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}')
+
+    @commands.command()
+    async def love(self, ctx):
+        if ctx.voice_client is None:
+            await ctx.send("Eu não estou conectado a um canal de voz.")
+            return
+
+        if ctx.author.voice is None or ctx.author.voice.channel != ctx.voice_client.channel:
+            await ctx.send("Você precisa estar no mesmo canal de voz que eu.")
+            return
+
+        mp3_path = f"{config.settings.IMG_PATH}audio.mp3"
+
+        try:
+            ctx.voice_client.play(discord.FFmpegPCMAudio(mp3_path), after=lambda e: print(f'Erro: {e}') if e else None)
+            ctx.voice_client.source = discord.PCMVolumeTransformer(ctx.voice_client.source)
+            ctx.voice_client.source.volume = 0.4
+            await ctx.send(f'Tocando: audio.mp3')
+        except Exception as e:
+            await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}')
+
+    @commands.command()
     async def citar(self, ctx):
         if not ctx.message.reference:
             await ctx.send("Nao consigo", delete_after=10)

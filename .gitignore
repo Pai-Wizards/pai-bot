@@ -59,7 +59,6 @@ cover/
 
 # Audio 
 *.wav
-*.mp3
 
 # Translations
 *.mo
