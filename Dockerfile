@@ -5,7 +5,7 @@ COPY . .
 RUN pip install --no-cache-dir --no-compile --prefix=/install -r requirements.txt
 
 FROM python:3.11.5-alpine3.18
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg libffi-dev openssl-dev
 WORKDIR /app
 ENV TZ=America/Sao_Paulo
 COPY --from=builder /install /usr/local
