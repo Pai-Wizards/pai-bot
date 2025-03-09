@@ -3,6 +3,7 @@ from random import choice
 
 import discord
 import requests
+from discord import FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
 
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
@@ -69,9 +70,19 @@ class Commands(commands.Cog):
         mp3_path = f"{config.settings.IMG_PATH}audio.mp3"
 
         try:
-            ctx.voice_client.play(discord.FFmpegPCMAudio(mp3_path), after=lambda e: print(f'Erro: {e}') if e else None)
-            ctx.voice_client.source = discord.PCMVolumeTransformer(ctx.voice_client.source)
-            ctx.voice_client.source.volume = 0.4
+            source = FFmpegPCMAudio(mp3_path)
+            source = PCMVolumeTransformer(source)
+            source.volume = 0.4
+
+            def after_playback(error):
+                if ctx.voice_client.is_playing():
+                    ctx.voice_client.stop()
+                if error:
+                    print(f'Erro: {error}')
+                else:
+                    print('Reprodução finalizada corretamente.')
+
+            ctx.voice_client.play(source, after=after_playback)
             await ctx.send(f'Tocando: audio.mp3')
         except Exception as e:
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}')
