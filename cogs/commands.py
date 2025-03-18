@@ -232,6 +232,9 @@ class Commands(commands.Cog):
     async def takemerda(self, ctx):
         if ctx.message.reference:
             referenced_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            if referenced_message.author.bot:
+                await ctx.invoke(self.javascript)
+                return
             palavrao = await xingar()
             await ctx.send(f" {referenced_message.author.mention} { palavrao}")
         await generic_take(ctx, "take merda")
