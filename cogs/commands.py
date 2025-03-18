@@ -153,7 +153,7 @@ class Commands(commands.Cog):
     @commands.command()
     async def words(self, ctx, trigger_name):
         response = "Triggers words disponíveis:\n"
-        for config_instance in self.bot.configs_list:
+        for config_instance in self.bot.configs_list.get("configs_list", []):
             if config_instance["name"] == trigger_name:
                 response += f"Nome do trigger: {config_instance['name']}\n"
                 response += f"Palavras-chave: {', '.join(config_instance['keywords'])}\n"
