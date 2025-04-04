@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from random import choice
 
@@ -264,9 +265,15 @@ class Commands(commands.Cog):
     async def pillfoda(self, ctx):
         await generic_take(ctx, "pillfoda")
 
-    @commands.command(name="taxado")
-    async def taxado(self, ctx):
-        await generic_take(ctx, "taxado")
+    @commands.command(name="dizer")
+    async def dizer(self, ctx, *, mensagem: str = None):
+        if not mensagem:
+            await ctx.send("Dizer o que?")
+            return
+
+        await asyncio.sleep(5)
+        await ctx.send(mensagem)
+
 
 
 async def setup(bot):
