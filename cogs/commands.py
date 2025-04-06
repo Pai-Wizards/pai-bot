@@ -84,7 +84,7 @@ class Commands(commands.Cog):
                     print('Reprodução finalizada corretamente.')
 
             ctx.voice_client.play(source, after=after_playback)
-            await ctx.send(f'Tocando: audio.mp3')
+            await ctx.send(f'Love {ctx.author.mention}!')
         except Exception as e:
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}')
 
@@ -267,9 +267,17 @@ class Commands(commands.Cog):
 
     @commands.command(name="dizer")
     async def dizer(self, ctx, *, mensagem: str = None):
-        if not mensagem:
+        if not mensagem and not ctx.message.reference:
             await ctx.send("Dizer o que?")
             return
+
+        if not mensagem and ctx.message.reference:
+            try:
+                mensagem_marcada = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+                mensagem = mensagem_marcada.content
+            except:
+                await ctx.send("Dizer o que?")
+                return
 
         await asyncio.sleep(5)
         await ctx.send(mensagem)
