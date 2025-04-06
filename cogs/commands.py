@@ -276,6 +276,8 @@ class Commands(commands.Cog):
             try:
                 mensagem_marcada = await ctx.channel.fetch_message(ctx.message.reference.message_id)
                 mensagem = mensagem_marcada.content
+                await ctx.send(mensagem)
+                return
             except:
                 await ctx.send("Dizer o que?")
                 return
