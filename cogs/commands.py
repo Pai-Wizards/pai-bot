@@ -64,10 +64,6 @@ class Commands(commands.Cog):
             await ctx.send("Eu não estou conectado a um canal de voz.")
             return
 
-        if ctx.author.voice is None or ctx.author.voice.channel != ctx.voice_client.channel:
-            await ctx.send("Você precisa estar no mesmo canal de voz que eu.")
-            return
-
         mp3_path = f"{config.settings.IMG_PATH}audio.mp3"
 
         try:
@@ -271,11 +267,15 @@ class Commands(commands.Cog):
     @commands.command(name="dizer")
     async def dizer(self, ctx, *, mensagem: str = None):
         if not mensagem:
+            logger.info("Mensagem vazia")
             await ctx.send("Dizer o que?")
             return
 
+        logger.info("Esperando 5 segundos")
         await asyncio.sleep(5)
+        logger.info("Dizendo mensagem")
         await ctx.send(mensagem)
+        return
 
 
 
