@@ -84,7 +84,7 @@ class Commands(commands.Cog):
                     print('Reprodução finalizada corretamente.', delete_after=10)
 
             ctx.voice_client.play(source, after=after_playback)
-            await ctx.send(f'Love {ctx.author.mention}!')
+            await ctx.send(f'Love {ctx.author.mention}!', delete_after=4)
             return
         except Exception as e:
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
