@@ -46,7 +46,7 @@ class Commands(commands.Cog):
     @commands.command()
     async def join(self, ctx):
         if ctx.author.voice is None:
-            await ctx.send("Você não está em um canal de voz.")
+            await ctx.send("Você não está em um canal de voz.", delete_after=10)
             return
 
         voice_channel = ctx.author.voice.channel
@@ -56,12 +56,16 @@ class Commands(commands.Cog):
         else:
             await voice_channel.connect()
 
-        await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}')
+        await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
 
     @commands.command()
     async def love(self, ctx):
+        # se o autor esta em um canal de voz efetuar o join
+        if ctx.author.voice and not ctx.voice_client:
+            await self.join(ctx)
+
         if ctx.voice_client is None:
-            await ctx.send("Eu não estou conectado a um canal de voz.")
+            await ctx.send("Eu não estou conectado a um canal de voz.", delete_after=10)
             return
 
         mp3_path = f"{config.settings.IMG_PATH}audio.mp3"
@@ -75,15 +79,15 @@ class Commands(commands.Cog):
                 if ctx.voice_client.is_playing():
                     ctx.voice_client.stop()
                 if error:
-                    print(f'Erro: {error}')
+                    print(f'Erro: {error}', delete_after=10)
                 else:
-                    print('Reprodução finalizada corretamente.')
+                    print('Reprodução finalizada corretamente.', delete_after=10)
 
             ctx.voice_client.play(source, after=after_playback)
             await ctx.send(f'Love {ctx.author.mention}!')
             return
         except Exception as e:
-            await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}')
+            await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
 
     @commands.command()
     async def citar(self, ctx):
@@ -276,6 +280,30 @@ class Commands(commands.Cog):
         logger.info("Dizendo mensagem")
         await ctx.send(mensagem)
         return
+
+    @commands.command(name="sound")
+    async def sound(self, ctx):
+        embed = discord.Embed(title="love", description="Escolhe ai:")
+
+        button1 = discord.ui.Button(label="❤️", style=discord.ButtonStyle.primary)
+        button2 = discord.ui.Button(label="Ping", style=discord.ButtonStyle.success)
+
+        async def button1_callback(interaction: discord.Interaction):
+            await interaction.response.send_message("Você clicou no botão ❤️!", ephemeral=True)
+            await self.love(ctx)
+
+        async def button2_callback(interaction: discord.Interaction):
+            await interaction.response.send_message("Você clicou no botão Audio 2!", ephemeral=True)
+            await self.ping(ctx)
+
+        button1.callback = button1_callback
+        button2.callback = button2_callback
+
+        view = discord.ui.View()
+        view.add_item(button1)
+        view.add_item(button2)
+
+        await ctx.send(embed=embed, view=view, delete_after=300)
 
 
 
