@@ -89,6 +89,37 @@ class Commands(commands.Cog):
         except Exception as e:
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
 
+    @commands.command(name="agro")
+    async def agro(self, ctx):
+        # se o autor esta em um canal de voz efetuar o join
+        if ctx.author.voice and not ctx.voice_client:
+            await self.join(ctx)
+
+        if ctx.voice_client is None:
+            await ctx.send("Eu não estou conectado a um canal de voz.", delete_after=10)
+            return
+
+        mp3_path = f"{config.settings.IMG_PATH}agrochan-love.mp3"
+
+        try:
+            source = FFmpegPCMAudio(mp3_path)
+            source = PCMVolumeTransformer(source)
+            source.volume = 0.4
+
+            def after_playback(error):
+                if ctx.voice_client.is_playing():
+                    ctx.voice_client.stop()
+                if error:
+                    print(f'Erro: {error}', delete_after=10)
+                else:
+                    print('Reprodução finalizada corretamente.', delete_after=10)
+
+            ctx.voice_client.play(source, after=after_playback)
+            await ctx.send(f'🚜 {ctx.author.mention}!', delete_after=4)
+            return
+        except Exception as e:
+            await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
+
     @commands.command()
     async def citar(self, ctx):
         if not ctx.message.reference:
@@ -286,15 +317,15 @@ class Commands(commands.Cog):
         embed = discord.Embed(title="love", description="Escolhe ai:")
 
         button1 = discord.ui.Button(label="❤️", style=discord.ButtonStyle.primary)
-        button2 = discord.ui.Button(label="Ping", style=discord.ButtonStyle.success)
+        button2 = discord.ui.Button(label="🚜", style=discord.ButtonStyle.success)
 
         async def button1_callback(interaction: discord.Interaction):
             await interaction.response.send_message("Você clicou no botão ❤️!", ephemeral=True)
             await self.love(ctx)
 
         async def button2_callback(interaction: discord.Interaction):
-            await interaction.response.send_message("Você clicou no botão Audio 2!", ephemeral=True)
-            await self.ping(ctx)
+            await interaction.response.send_message("Você clicou no botão 🚜!", ephemeral=True)
+            await self.agro(ctx)
 
         button1.callback = button1_callback
         button2.callback = button2_callback
