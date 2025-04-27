@@ -175,6 +175,15 @@ class Commands(commands.Cog):
         except Exception as e:
             logger.error(f"Erro ao enviar imagem de alerta: {e}")
 
+    @commands.command(name="boluut")
+    async def boluut(self, ctx):
+        img_path = config.settings.IMG_PATH + "law.png"
+        try:
+            with open(img_path, "rb") as image_file:
+                await ctx.send(file=discord.File(image_file))
+        except Exception as e:
+            logger.error(f"Erro ao enviar imagem de alerta: {e}")
+
 
     @commands.command()
     async def trigger(self, ctx):
