@@ -137,18 +137,15 @@ class Commands(commands.Cog):
                 await ctx.send("Nao consigo", delete_after=10)
                 return
 
-            #data mensagem
             msg_date_year = referenced_message.created_at.strftime("%Y")
-            conteudo = referenced_message.content
             autor_id = referenced_message.author.mention
             canal_nome = ctx.channel.name
             servidor_nome = ctx.guild.name
-            #data no formato 25 set. 2019.
             data_formatada = datetime.now().strftime("%d %b. %Y")
             mensagem_url = referenced_message.jump_url
 
             citacao = (
-                f"{conteudo} ({autor_id}, 2025)\n\n"
+                f"{referenced_message.content} ({autor_id}, {msg_date_year})\n\n"
                 f"{autor_id}. **Mensagem em [{canal_nome}]**, 2025.\n"
                 f"*{servidor_nome}*. Discord, {msg_date_year}. Disponível em: [{mensagem_url}]\n"
                 f"Acesso em: {data_formatada}."
