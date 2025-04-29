@@ -146,7 +146,7 @@ class Commands(commands.Cog):
 
             citacao = (
                 f"{referenced_message.content} ({autor_id}, {msg_date_year})\n\n"
-                f"{autor_id}. **Mensagem em [{canal_nome}]**, 2025.\n"
+                f"{autor_id}. **Mensagem em [{canal_nome}]**, {msg_date_year}.\n"
                 f"*{servidor_nome}*. Discord, {msg_date_year}. Disponível em: [{mensagem_url}]\n"
                 f"Acesso em: {data_formatada}."
             )
