@@ -10,6 +10,16 @@ class Tasks(commands.Cog):
         self.bot = bot
         if not self.check_record.is_running():
             self.check_record.start()
+            self.leave_if_alone.start()
+
+    @tasks.loop(minutes=5)
+    async def leave_if_alone(self):
+        logger.info("Executando task leave_if_alone")
+        for vc in self.bot.voice_clients:
+            if len(vc.channel.members) == 1:
+                await vc.disconnect()
+                logger.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
+
 
     @tasks.loop(hours=4)
     async def check_record(self):
