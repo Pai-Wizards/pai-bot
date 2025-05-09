@@ -54,10 +54,10 @@ class Commands(commands.Cog):
 
         if ctx.voice_client is not None:
             await ctx.voice_client.move_to(voice_channel)
-            await self.bot.change_presence(activity=discord.Game(name="love.lua"))
+            await self.bot.change_presence(activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
         else:
             await voice_channel.connect()
-            await self.bot.change_presence(activity=discord.Game(name="love.lua"))
+            await self.bot.change_presence(activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
 
         await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
 
