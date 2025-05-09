@@ -33,9 +33,10 @@ async def generic_take(ctx, take_type: str):
     save_takes_json(data)
 
     await ctx.send(
-        f"ESTAMOS A 0 DIAS SEM {take_type.upper()}. \n"
+        f"ESTAMOS HÁ 0 DIAS SEM {take_type.upper()}. \n"
         f"NOSSO RECORDE É DE {take_data['record']} DIAS! \n"
-        f"TOTAL DE {take_type.upper()}: {take_data['total']}"
+        f"TOTAL DE {take_type.upper()}: {take_data['total']} \n"
+        f"🚜 COLABORE PARA MELHORAR ESSE ÍNDICE!"
     )
 
 
@@ -53,10 +54,20 @@ class Commands(commands.Cog):
 
         if ctx.voice_client is not None:
             await ctx.voice_client.move_to(voice_channel)
+            await self.bot.change_presence(activity=discord.Game(name="love.lua"))
         else:
             await voice_channel.connect()
+            await self.bot.change_presence(activity=discord.Game(name="love.lua"))
 
         await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
+
+    @commands.command()
+    async def leave(self, ctx):
+        if ctx.voice_client is None:
+            await ctx.send("Não estou conectado a um canal de voz.", delete_after=1)
+            return
+        await ctx.voice_client.disconnect()
+
 
     @commands.command()
     async def love(self, ctx):
