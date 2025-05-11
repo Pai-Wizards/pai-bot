@@ -23,7 +23,7 @@ class Tasks(commands.Cog):
                 await vc.disconnect()
                 logger.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
 
-    @tasks.loop(seconds=2)
+    @tasks.loop(minutes=30)
     async def music(self):
         logger.info("Excutando Music")
         music_array = [
@@ -37,6 +37,9 @@ class Tasks(commands.Cog):
             "Foo Fighters - Everlong",
             "Radiohead - Creep",
             "The Offspring - Self Esteem",
+            "Linkin Park - Numb",
+            "Evanescence - Bring Me to Life",
+            "Creed - With Arms Wide Open",
         ]
 
         random_music = random.choice(music_array)
@@ -46,36 +49,9 @@ class Tasks(commands.Cog):
                 name=random_music,
             ))
 
-    @tasks.loop(minutes=30)
-    async def cringe_music(self):
-        musicas_cringe = [
-            "Creed - With Arms Wide Open",
-            "Nickelback - How You Remind Me",
-            "Limp Bizkit - Rollin'",
-            "Bon Jovi - It's My Life",
-            "Europe - The Final Countdown",
-            "Scorpions - Wind of Change",
-            "Poison - Every Rose Has Its Thorn",
-            "Whitesnake - Here I Go Again",
-            "Twisted Sister - We're Not Gonna Take It",
-            "Survivor - Eye of the Tiger",
-            "Aerosmith - I Don't Want to Miss a Thing",
-            "Linkin Park - In the End",
-            "P.O.D. - Youth of the Nation",
-            "Evanescence - Bring Me to Life",
-        ]
-        musica = random.choice(musicas_cringe)
-        await self.bot.change_presence(
-            activity=discord.Activity(
-                name=musica,
-                type=discord.ActivityType.listening
-            )
-        )
-
     @music.before_loop
-    async def before_cringe_music(self):
+    async def before_music(self):
         await self.bot.wait_until_ready()
-
 
     @tasks.loop(hours=4)
     async def check_record(self):
