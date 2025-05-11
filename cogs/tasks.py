@@ -2,6 +2,8 @@ from discord.ext import tasks, commands
 import logging
 import config.settings
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
+import random
+import discord
 
 logger = logging.getLogger("bot_logger")
 
@@ -11,6 +13,7 @@ class Tasks(commands.Cog):
         if not self.check_record.is_running():
             self.check_record.start()
             self.leave_if_alone.start()
+            self.music.start()
 
     @tasks.loop(minutes=5)
     async def leave_if_alone(self):
@@ -19,6 +22,59 @@ class Tasks(commands.Cog):
             if len(vc.channel.members) == 1:
                 await vc.disconnect()
                 logger.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
+
+    @tasks.loop(seconds=2)
+    async def music(self):
+        logger.info("Excutando Music")
+        music_array = [
+            "Creed - My Sacrifice",
+            "Pearl Jam - Black",
+            "Linkin Park - In the End",
+            "Nirvana - Smells Like Teen Spirit",
+            "Guns N' Roses - Sweet Child O' Mine",
+            "Metallica - Nothing Else Matters",
+            "Red Hot Chili Peppers - Under the Bridge",
+            "Foo Fighters - Everlong",
+            "Radiohead - Creep",
+            "The Offspring - Self Esteem",
+        ]
+
+        random_music = random.choice(music_array)
+        await self.bot.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name=random_music,
+            ))
+
+    @tasks.loop(minutes=30)
+    async def cringe_music(self):
+        musicas_cringe = [
+            "Creed - With Arms Wide Open",
+            "Nickelback - How You Remind Me",
+            "Limp Bizkit - Rollin'",
+            "Bon Jovi - It's My Life",
+            "Europe - The Final Countdown",
+            "Scorpions - Wind of Change",
+            "Poison - Every Rose Has Its Thorn",
+            "Whitesnake - Here I Go Again",
+            "Twisted Sister - We're Not Gonna Take It",
+            "Survivor - Eye of the Tiger",
+            "Aerosmith - I Don't Want to Miss a Thing",
+            "Linkin Park - In the End",
+            "P.O.D. - Youth of the Nation",
+            "Evanescence - Bring Me to Life",
+        ]
+        musica = random.choice(musicas_cringe)
+        await self.bot.change_presence(
+            activity=discord.Activity(
+                name=musica,
+                type=discord.ActivityType.listening
+            )
+        )
+
+    @music.before_loop
+    async def before_cringe_music(self):
+        await self.bot.wait_until_ready()
 
 
     @tasks.loop(hours=4)
