@@ -40,6 +40,9 @@ class Tasks(commands.Cog):
             "Linkin Park - Numb",
             "Evanescence - Bring Me to Life",
             "Creed - With Arms Wide Open",
+            "Bon Jovi - Always",
+            "Segure o Tchan – É O Tchan!",
+            "I Want It That Way – Backstreet Boys",
         ]
 
         random_music = random.choice(music_array)
