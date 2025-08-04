@@ -162,7 +162,13 @@ class Commands(commands.Cog):
                 f"Acesso em: {data_formatada}."
             )
 
-            await ctx.send(citacao)
+            canal_destino = self.bot.get_channel(config.settings.CITATION)
+            if not canal_destino:
+                await ctx.send("Não consegui encontrar o canal de citação.", delete_after=1)
+                return
+
+            await canal_destino.send(citacao)
+            #await ctx.send(citacao)
 
         except discord.NotFound:
             return
