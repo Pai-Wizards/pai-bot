@@ -132,7 +132,7 @@ class Commands(commands.Cog):
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
 
     @commands.command()
-    async def citar(self, ctx):
+    async def citar(self, ctx, qtd: int = 1):
         if not ctx.message.reference:
             await ctx.send("Nao consigo", delete_after=10)
             return
@@ -148,6 +148,23 @@ class Commands(commands.Cog):
                 await ctx.send("Nao consigo", delete_after=10)
                 return
 
+            # Guardar conteúdo concatenado
+            conteudo_total = [referenced_message.content]
+
+            # Buscar subsequentes
+            if qtd > 1:
+                after_id = referenced_message.id
+                async for msg in ctx.channel.history(after=discord.Object(id=after_id), limit=qtd - 1,
+                                                     oldest_first=True):
+                    if msg.author.bot:
+                        continue
+                    if not msg.content.strip():
+                        continue
+                    conteudo_total.append(msg.content)
+
+            # Concatenar todas as mensagens
+            texto_citacao = " ".join(conteudo_total)
+
             msg_date_year = referenced_message.created_at.strftime("%Y")
             autor_id = referenced_message.author.mention
             canal_nome = ctx.channel.name
@@ -156,7 +173,7 @@ class Commands(commands.Cog):
             mensagem_url = referenced_message.jump_url
 
             citacao = (
-                f"{referenced_message.content} ({autor_id}, {msg_date_year})\n\n"
+                f"{texto_citacao} ({autor_id}, {msg_date_year})\n\n"
                 f"{autor_id}. **Mensagem em [{canal_nome}]**, {msg_date_year}.\n"
                 f"*{servidor_nome}*. Discord, {msg_date_year}. Disponível em: [{mensagem_url}]\n"
                 f"Acesso em: {data_formatada}."
@@ -168,17 +185,13 @@ class Commands(commands.Cog):
                 return
 
             await canal_destino.send(citacao)
-            #await ctx.send(citacao)
 
         except discord.NotFound:
             return
-            # await ctx.send("Não foi possível encontrar a mensagem referenciada.", delete_after=10)
         except discord.Forbidden:
             return
-            # await ctx.send("Não tenho permissão para acessar essa mensagem.", delete_after=10)
         except discord.HTTPException:
             return
-            # await ctx.send("Ocorreu um erro ao recuperar a mensagem.", delete_after=10)
 
     @commands.command()
     async def javascript(self, ctx):
