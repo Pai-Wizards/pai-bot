@@ -10,6 +10,11 @@ from discord.ext import commands
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 import config.settings
+import re
+
+def limpar_citar(texto: str) -> str:
+    # Remove padrões "!citar" seguidos de número ou sozinho
+    return re.sub(r"!citar(?:\s*\d+)?", "", texto, flags=re.IGNORECASE).strip()
 
 async def generic_take(ctx, take_type: str):
     data = load_takes_json()
@@ -148,22 +153,43 @@ class Commands(commands.Cog):
                 await ctx.send("Nao consigo", delete_after=10)
                 return
 
-            # Guardar conteúdo concatenado
-            conteudo_total = [referenced_message.content]
+            conteudo_total = []
 
-            # Buscar subsequentes
+            # Limpar e adicionar a primeira mensagem
+            conteudo_limpo = limpar_citar(referenced_message.content)
+            if conteudo_limpo:
+                conteudo_total.append(conteudo_limpo)
+
+            # Buscar subsequentes apenas do mesmo autor
             if qtd > 1:
                 after_id = referenced_message.id
-                async for msg in ctx.channel.history(after=discord.Object(id=after_id), limit=qtd - 1,
-                                                     oldest_first=True):
+                async for msg in ctx.channel.history(
+                        after=discord.Object(id=after_id),
+                        limit=50,
+                        oldest_first=True
+                ):
                     if msg.author.bot:
+                        continue
+                    if msg.author.id != referenced_message.author.id:
                         continue
                     if not msg.content.strip():
                         continue
-                    conteudo_total.append(msg.content)
+
+                    conteudo_limpo = limpar_citar(msg.content)
+                    if not conteudo_limpo:
+                        continue
+
+                    conteudo_total.append(conteudo_limpo)
+
+                    if len(conteudo_total) >= qtd:
+                        break
 
             # Concatenar todas as mensagens
             texto_citacao = " ".join(conteudo_total)
+
+            if not texto_citacao:
+                await ctx.send("Nao encontrei conteúdo válido para citar.", delete_after=10)
+                return
 
             msg_date_year = referenced_message.created_at.strftime("%Y")
             autor_id = referenced_message.author.mention
