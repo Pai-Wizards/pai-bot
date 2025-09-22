@@ -1,0 +1,18 @@
+{
+  "javascript": {
+    "file": "javascript.png",
+    "description": "Imagem do JavaScript"
+  },
+  "berga": {
+    "file": "berga.gif",
+    "description": "Vídeo do Berga"
+  },
+  "niti": {
+    "file": "berga.mp4",
+    "description": "Vídeo do Berga"
+  },
+  "boluut": {
+    "file": "law.png",
+    "description": "Imagem do Law"
+  }
+}
