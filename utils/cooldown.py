@@ -2,7 +2,6 @@ import time
 
 cooldowns = {}
 
-
 def on_cooldown(user_id: int, cooldown_time: int, admin_id=None):
     print(f"User ID: {user_id}")
     if admin_id and user_id == admin_id:

@@ -9,11 +9,9 @@ def load_takes_json():
     with open(TAKES_FILE, "r") as f:
         return json.load(f)
 
-
 def save_takes_json(data):
     with open(TAKES_FILE, "w") as f:
         json.dump(data, f)
-
 
 def days_since_last_take(last_take):
     if last_take is None:

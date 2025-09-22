@@ -1,4 +1,5 @@
 import asyncio
+import re
 from datetime import datetime
 from random import choice
 
@@ -7,14 +8,15 @@ import requests
 from discord import FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
 
+import config.settings
+from config.config_loader import register_media_commands
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
-import config.settings
-import re
+
 
 def limpar_citar(texto: str) -> str:
-    # Remove padrões "!citar" seguidos de número ou sozinho
     return re.sub(r"!citar(?:\s*\d+)?", "", texto, flags=re.IGNORECASE).strip()
+
 
 async def generic_take(ctx, take_type: str):
     data = load_takes_json()
@@ -48,6 +50,7 @@ async def generic_take(ctx, take_type: str):
 class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        register_media_commands(self)
 
     @commands.command()
     async def join(self, ctx):
@@ -59,10 +62,12 @@ class Commands(commands.Cog):
 
         if ctx.voice_client is not None:
             await ctx.voice_client.move_to(voice_channel)
-            await self.bot.change_presence(activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
+            await self.bot.change_presence(
+                activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
         else:
             await voice_channel.connect()
-            await self.bot.change_presence(activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
+            await self.bot.change_presence(
+                activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
 
         await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
 
@@ -72,7 +77,6 @@ class Commands(commands.Cog):
             await ctx.send("Não estou conectado a um canal de voz.", delete_after=1)
             return
         await ctx.voice_client.disconnect()
-
 
     @commands.command()
     async def love(self, ctx):
@@ -95,9 +99,9 @@ class Commands(commands.Cog):
                 if ctx.voice_client.is_playing():
                     ctx.voice_client.stop()
                 if error:
-                    print(f'Erro: {error}', delete_after=10)
+                    logger.info(f'Erro: {error}')
                 else:
-                    print('Reprodução finalizada corretamente.', delete_after=10)
+                    logger.info('Reprodução finalizada corretamente.', delete_after=10)
 
             ctx.voice_client.play(source, after=after_playback)
             await ctx.send(f'Love {ctx.author.mention}!', delete_after=4)
@@ -126,9 +130,9 @@ class Commands(commands.Cog):
                 if ctx.voice_client.is_playing():
                     ctx.voice_client.stop()
                 if error:
-                    print(f'Erro: {error}', delete_after=10)
+                    ctx.send(f'deu esse erro aqui: {error}', delete_after=10)
                 else:
-                    print('Reprodução finalizada corretamente.', delete_after=10)
+                    ctx.send('Reprodução finalizada corretamente.', delete_after=10)
 
             ctx.voice_client.play(source, after=after_playback)
             await ctx.send(f'🚜 {ctx.author.mention}!', delete_after=4)
@@ -220,25 +224,6 @@ class Commands(commands.Cog):
             return
 
     @commands.command()
-    async def javascript(self, ctx):
-        img_path = config.settings.IMG_PATH + "javascript.png"
-        try:
-            with open(img_path, "rb") as image_file:
-                await ctx.send(file=discord.File(image_file))
-        except Exception as e:
-            logger.error(f"Erro ao enviar imagem de alerta: {e}")
-
-    @commands.command(name="boluut")
-    async def boluut(self, ctx):
-        img_path = config.settings.IMG_PATH + "law.png"
-        try:
-            with open(img_path, "rb") as image_file:
-                await ctx.send(file=discord.File(image_file))
-        except Exception as e:
-            logger.error(f"Erro ao enviar imagem de alerta: {e}")
-
-
-    @commands.command()
     async def trigger(self, ctx):
         response = "Triggers disponíveis:\n"
         for config_instance in self.bot.configs_list:
@@ -265,7 +250,7 @@ class Commands(commands.Cog):
 
         embed.set_image(url=image_url)
         await ctx.message.reply(embed=embed)
-    
+
     @commands.command(description="HTTP Cat")
     async def cat(self, ctx, http_code):
         image_url = f'https://http.cat/{http_code}.jpg'
@@ -328,15 +313,15 @@ class Commands(commands.Cog):
         if ctx.message.reference:
             referenced_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
             if referenced_message.author.bot:
-                await ctx.invoke(self.javascript)
+                await ctx.invoke(self.bot.get_command("javascript"))
                 return
             palavrao = await xingar()
-            await ctx.send(f" {referenced_message.author.mention} { palavrao}")
+            await ctx.send(f" {referenced_message.author.mention} {palavrao}")
         await generic_take(ctx, "take merda")
 
     @commands.command()
     async def jahpodmussar(self, ctx):
-        print("jahpodmussar commando")
+        logger.info("jahpodmussar commando")
         current_date = datetime.now()
         hora_atual = current_date.strftime("%H:%M")
 
@@ -358,8 +343,6 @@ class Commands(commands.Cog):
     @commands.command(name="pillfoda")
     async def pillfoda(self, ctx):
         await generic_take(ctx, "pillfoda")
-
-
 
     @commands.command(name="dizer")
     async def dizer(self, ctx, *, mensagem: str = None):
@@ -397,7 +380,6 @@ class Commands(commands.Cog):
         view.add_item(button2)
 
         await ctx.send(embed=embed, view=view, delete_after=300)
-
 
 
 async def setup(bot):
