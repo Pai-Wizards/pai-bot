@@ -48,8 +48,6 @@ class Events(commands.Cog):
                 except Exception as e:
                     logger.error(f"Erro ao enviar imagem de alerta: {e}")
 
-            logger.info(f"Mensagem apagada no canal {message.channel.name} por {message.author}: {message.content}")
-
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author == self.bot.user or message.content.startswith("!"):
