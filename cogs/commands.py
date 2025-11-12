@@ -3,8 +3,8 @@ import re
 from datetime import datetime
 from random import choice
 
+import aiohttp
 import discord
-import requests
 from discord import FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
 
@@ -19,7 +19,7 @@ def limpar_citar(texto: str) -> str:
 
 
 async def generic_take(ctx, take_type: str):
-    data = load_takes_json()
+    data = await load_takes_json()
 
     if take_type not in data:
         data[take_type] = {
@@ -37,7 +37,7 @@ async def generic_take(ctx, take_type: str):
 
     take_data["last_take"] = datetime.now().isoformat()
     take_data["total"] += 1
-    save_takes_json(data)
+    await save_takes_json(data)
 
     await ctx.send(
         f"ESTAMOS HÁ 0 DIAS SEM {take_type.upper()}. \n"
@@ -256,12 +256,14 @@ class Commands(commands.Cog):
         image_url = f'https://http.cat/{http_code}.jpg'
 
         try:
-            if requests.get(image_url).status_code != 200:
-                await ctx.send("nao tem gatiho pra esse codigo")
-                return
-            embed = discord.Embed(description=f"HTTP Cat {http_code}")
-            embed.set_image(url=image_url)
-            await ctx.message.reply(embed=embed)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(image_url) as response:
+                    if response.status != 200:
+                        await ctx.send("nao tem gatiho pra esse codigo")
+                        return
+                    embed = discord.Embed(description=f"HTTP Cat {http_code}")
+                    embed.set_image(url=image_url)
+                    await ctx.message.reply(embed=embed)
         except Exception as e:
             logger.info(f"Erro ao buscar dados: {e}")
             await ctx.send("ih rapaz, deu ruim")
@@ -287,7 +289,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def take(self, ctx):
-        data = load_takes_json()
+        data = await load_takes_json()
 
         response = "STATUS DOS TAKES:\n"
 

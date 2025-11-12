@@ -1,16 +1,18 @@
 import time
+import logging
 
+logger = logging.getLogger("bot_logger")
 cooldowns = {}
 
 def on_cooldown(user_id: int, cooldown_time: int, admin_id=None):
-    print(f"User ID: {user_id}")
+    logger.debug(f"Checking cooldown for user ID: {user_id}")
     if admin_id and user_id == admin_id:
-        print("Admin bypass")
+        logger.debug("Admin bypass activated")
         return False
     last_trigger = cooldowns.get(user_id, 0)
     if time.time() - last_trigger > cooldown_time:
         cooldowns[user_id] = time.time()
-        print("User not in cooldown")
+        logger.debug("User not in cooldown")
         return False
-    print("User in cooldown")
+    logger.debug("User in cooldown")
     return True
