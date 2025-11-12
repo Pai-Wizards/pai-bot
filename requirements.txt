@@ -5,3 +5,4 @@ Pillow
 aiohttp~=3.11.11
 requests~=2.32.3
 PyNaCl~=1.4.0
+aiofiles~=24.1.0

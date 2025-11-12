@@ -73,7 +73,7 @@ class Tasks(commands.Cog):
         )
 
     async def handle_record(self, channel_id: int, take_type: str, message_template: str):
-        data = load_takes_json()
+        data = await load_takes_json()
 
         if take_type not in data:
             return
@@ -84,7 +84,7 @@ class Tasks(commands.Cog):
 
         if days > record:
             take_data["record"] = days
-            save_takes_json(data)
+            await save_takes_json(data)
 
             channel = self.bot.get_channel(channel_id)
             if channel:
