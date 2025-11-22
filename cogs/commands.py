@@ -10,7 +10,7 @@ from discord.ext import commands
 
 import config.settings
 from config.config_loader import register_media_commands
-from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
+from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar, search_images
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 
@@ -52,8 +52,57 @@ class Commands(commands.Cog):
         self.bot = bot
         register_media_commands(self)
 
+    class ImagePaginator(discord.ui.View):
+        def __init__(self, results, query, author_id, timeout=300):
+            super().__init__(timeout=timeout)
+            self.results = results
+            self.query = query
+            self.index = 0
+            self.author_id = author_id
+            self.message = None
+
+        async def on_timeout(self) -> None:
+            for item in self.children:
+                item.disabled = True
+            if self.message:
+                try:
+                    await self.message.edit(view=self)
+                except Exception:
+                    pass
+
+        def _update_button_states(self):
+            # Disable prev on first, next on last
+            for child in self.children:
+                if getattr(child, "custom_id", None) == "prev_btn":
+                    child.disabled = (self.index == 0)
+                if getattr(child, "custom_id", None) == "next_btn":
+                    child.disabled = (self.index == len(self.results) - 1)
+
+        @discord.ui.button(label="Anterior", style=discord.ButtonStyle.secondary, custom_id="prev_btn")
+        async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+            if self.index > 0:
+                self.index -= 1
+            self._update_button_states()
+            embed = discord.Embed(title=f"{self.query} ({self.index+1}/{len(self.results)})")
+            embed.set_image(url=self.results[self.index])
+            logger.info(f"Embed URL set to: {embed.image.url}")
+            await interaction.response.edit_message(embed=embed, view=self)
+
+        @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
+        async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+            if interaction.user.id != self.author_id:
+                await interaction.response.send_message("Apenas o autor da busca pode usar esses botões.", ephemeral=True)
+                return
+            if self.index < len(self.results) - 1:
+                self.index += 1
+            self._update_button_states()
+            embed = discord.Embed(title=f"{self.query} ({self.index+1}/{len(self.results)})")
+            embed.set_image(url=self.results[self.index])
+            logger.info(f"Embed URL set to: {embed.image.url}")
+            await interaction.response.edit_message(embed=embed, view=self)
     @commands.command()
     async def join(self, ctx):
+        """Faz o bot entrar no canal de voz do autor do comando."""
         if ctx.author.voice is None:
             await ctx.send("Você não está em um canal de voz.", delete_after=10)
             return
@@ -73,6 +122,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def leave(self, ctx):
+        """Faz o bot sair do canal de voz."""
         if ctx.voice_client is None:
             await ctx.send("Não estou conectado a um canal de voz.", delete_after=1)
             return
@@ -80,7 +130,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def love(self, ctx):
-        # se o autor esta em um canal de voz efetuar o join
+        """Toca o som do love"""
         if ctx.author.voice and not ctx.voice_client:
             await self.join(ctx)
 
@@ -111,7 +161,7 @@ class Commands(commands.Cog):
 
     @commands.command(name="agro")
     async def agro(self, ctx):
-        # se o autor esta em um canal de voz efetuar o join
+        """Toca o som do agrochan love"""
         if ctx.author.voice and not ctx.voice_client:
             await self.join(ctx)
 
@@ -142,6 +192,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def citar(self, ctx, qtd: int = 1):
+        """Cita a mensagem referenciada no canal de citações."""
         if not ctx.message.reference:
             await ctx.send("Nao consigo", delete_after=10)
             return
@@ -225,6 +276,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def trigger(self, ctx):
+        """Mostra os triggers disponíveis"""    
         response = "Triggers disponíveis:\n"
         for config_instance in self.bot.configs_list:
             response += f"{config_instance['name']}\n"
@@ -232,6 +284,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def words(self, ctx, trigger_name):
+        """Mostra as palavras-chave de um trigger específico"""
         response = "Triggers words disponíveis:\n"
         for config_instance in self.bot.configs_list.get("configs_list", []):
             if config_instance["name"] == trigger_name:
@@ -243,6 +296,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def dog(self, ctx, dog):
+        """Mostra a imagem de um código HTTP em formato de perro"""
         description, url, image_url = await fetch_http_dog_image(dog, True)
         if not url or not description:
             await ctx.send("ih rapaz, deu ruim")
@@ -253,6 +307,7 @@ class Commands(commands.Cog):
 
     @commands.command(description="HTTP Cat")
     async def cat(self, ctx, http_code):
+        """Mostra a imagem de um código HTTP em formato de gato"""
         image_url = f'https://http.cat/{http_code}.jpg'
 
         try:
@@ -268,6 +323,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def http(self, ctx, http):
+        """Busca descrição de códigos HTTP na MDN"""
         description, url = await fetch_mdn_description(http)
         if not description:
             description, url, image_url = await fetch_http_dog_image(http, False)
@@ -280,13 +336,51 @@ class Commands(commands.Cog):
         else:
             await ctx.send(f"{description}\n{url}")
 
+    @commands.command(name="google", aliases=["img", "image"])
+    async def google_images(self, ctx, *, query: str = None):
+        """Busca imagens na internet"""
+        if not query:
+            await ctx.invoke(self.bot.get_command("javascript"))
+            return
+
+        try:
+            async with ctx.typing():
+                results = await search_images(query, max_results=10)
+        except Exception as e:
+            logger.error(f"Erro na busca de imagens: {e}")
+            await ctx.send(f".img {query}")
+            return
+
+        if not results:
+            await ctx.send("Não encontrei imagens para essa busca.")
+            await ctx.send(f".img {query}")
+            return
+
+        #Printar tamanho antes dos filtros
+        logger.info(f"Tamanho antes dos filtros: {len(results)}")
+
+        results = [url for url in results if re.search(r'\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg)(\?|$)', url, re.IGNORECASE)]
+
+        logger.info(f"Tamanho depois dos filtros: {len(results)}")
+
+        view = self.ImagePaginator(results, query, ctx.author.id)
+        view._update_button_states()
+        embed = discord.Embed(title=f"{query} (1/{len(results)})")
+        embed.set_image(url=results[0])
+        #logger.info(f"Embed URL set to: {embed.image.url}")
+
+        sent = await ctx.send(embed=embed, view=view)
+        view.message = sent
+
     @commands.command()
     async def ping(self, ctx):
+        """Ping Pong!"""
         time = round(self.bot.latency * 1000)
         await ctx.send(f"Pong! {time}ms")
 
     @commands.command()
     async def take(self, ctx):
+        """Mostra o status dos takes"""
         data = load_takes_json()
 
         response = "STATUS DOS TAKES:\n"
@@ -310,6 +404,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def takemerda(self, ctx):
+        """Registra um take merda"""
         if ctx.message.reference:
             referenced_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
             if referenced_message.author.bot:
@@ -319,8 +414,9 @@ class Commands(commands.Cog):
             await ctx.send(f" {referenced_message.author.mention} {palavrao}")
         await generic_take(ctx, "take merda")
 
-    @commands.command()
+    @commands.command(name="jahpodmussar", aliases=["almoco", "japodecomer"])
     async def jahpodmussar(self, ctx):
+        """Responde se já pode almoçar/jantar"""
         logger.info("jahpodmussar commando")
         current_date = datetime.now()
         hora_atual = current_date.strftime("%H:%M")
@@ -342,23 +438,26 @@ class Commands(commands.Cog):
 
     @commands.command(name="pillfoda")
     async def pillfoda(self, ctx):
+        """Registra um pillfoda"""
         await generic_take(ctx, "pillfoda")
 
     @commands.command(name="dizer")
     async def dizer(self, ctx, *, mensagem: str = None):
+        """Diz a mensagem após 120 segundos"""
         if not mensagem:
             logger.info("Mensagem vazia")
             await ctx.send("Dizer o que?")
             return
 
-        logger.info("Esperando 5 segundos")
-        await asyncio.sleep(5)
+        logger.info("Esperando 120 segundos para dizer a mensagem")
+        await asyncio.sleep(120)
         logger.info("Dizendo mensagem")
         await ctx.send(mensagem)
         return
 
     @commands.command(name="sound")
     async def sound(self, ctx):
+        """Mostra os botões de sound"""
         embed = discord.Embed(title="love", description="Escolhe ai:")
 
         button1 = discord.ui.Button(label="❤️", style=discord.ButtonStyle.primary)
