@@ -90,9 +90,6 @@ class Commands(commands.Cog):
 
         @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
         async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-            if interaction.user.id != self.author_id:
-                await interaction.response.send_message("Apenas o autor da busca pode usar esses botões.", ephemeral=True)
-                return
             if self.index < len(self.results) - 1:
                 self.index += 1
             self._update_button_states()
