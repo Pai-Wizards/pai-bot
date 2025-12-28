@@ -34,7 +34,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, case_insensitive=True)
 bot.configs_list = configs_list
 bot.almoco_list = almoco_frases_list
 
-COGS = ["cogs.commands", "cogs.events", "cogs.tasks"]
+COGS = ["cogs.commands", "cogs.events", "cogs.tasks", "cogs.daily_citation"]
 
 
 async def load_extensions(bot):
