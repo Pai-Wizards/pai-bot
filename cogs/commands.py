@@ -118,6 +118,12 @@ class Commands(commands.Cog):
         await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
 
     @commands.command()
+    async def git (self, ctx):
+        """Mostra o link do repositório GitHub do bot."""
+        git_url = "https://github.com/Pai-Wizards/pai-bot"
+        await ctx.send(f"**Faz um pull request aí:** {git_url}")
+
+    @commands.command()
     async def leave(self, ctx):
         """Faz o bot sair do canal de voz."""
         if ctx.voice_client is None:
