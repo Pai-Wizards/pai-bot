@@ -229,7 +229,7 @@ class Commands(commands.Cog):
                     if msg.author.bot:
                         continue
                     if msg.author.id != referenced_message.author.id:
-                        continue
+                        break
                     if not msg.content.strip():
                         continue
 
