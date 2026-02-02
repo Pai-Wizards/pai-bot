@@ -5,8 +5,8 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from config import config_loader as cl, settings
-from datetime import datetime
 import locale
+from server.notification_server import NotificationServer
 
 bot_logger = logging.getLogger("bot_logger")
 logging.basicConfig(
@@ -34,7 +34,14 @@ bot = commands.Bot(command_prefix="!", intents=intents, case_insensitive=True)
 bot.configs_list = configs_list
 bot.almoco_list = almoco_frases_list
 
-COGS = ["cogs.commands", "cogs.events", "cogs.tasks", "cogs.daily_citation"]
+notification_server = NotificationServer(
+    bot=bot,                                      # Instância do bot Discord
+    host=settings.HTTP_SERVER_HOST,               # Padrão: 0.0.0.0
+    port=settings.HTTP_SERVER_PORT,               # Padrão: 8080
+    channel_id=settings.NOTIFICATION_CHANNEL_ID   # ID do canal Discord
+)
+
+COGS = []
 
 
 async def load_extensions(bot):
@@ -53,8 +60,18 @@ async def on_ready():
 
 async def main():
     await load_extensions(bot)
-    bot_logger.info("Iniciando bot...")
-    await bot.start(settings.TOKEN)
+
+    # Inicia servidor HTTP em paralelo com o bot
+    # O servidor roda em asyncio sem bloquear o bot Discord
+    bot_logger.info("Iniciando HTTP server para notificações...")
+    http_runner = await notification_server.start()
+
+    try:
+        bot_logger.info("Iniciando bot...")
+        await bot.start(settings.TOKEN)
+    finally:
+        # Cleanup do servidor HTTP ao encerrar (libera porta e recursos)
+        await http_runner.cleanup()
 
 
 if __name__ == "__main__":
