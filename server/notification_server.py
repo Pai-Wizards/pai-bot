@@ -155,5 +155,4 @@ class NotificationServer:
         site = web.TCPSite(runner, self.host, self.port)
         await site.start()
         logger.info(f"HTTP Server rodando em http://{self.host}:{self.port}")
-        logger.info(f"Endpoint: POST http://{self.host}:{self.port}/event")
         return runner
