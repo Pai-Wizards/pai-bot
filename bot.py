@@ -3,10 +3,12 @@ import logging
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+import locale
+
+load_dotenv()
 
 from config import config_loader as cl, settings
-from datetime import datetime
-import locale
+from server.notification_server import NotificationServer
 
 bot_logger = logging.getLogger("bot_logger")
 logging.basicConfig(
@@ -23,7 +25,6 @@ config_file = cl.load_config()
 configs_list = cl.get_configs(config_file)
 almoco_frases_list = cl.create_almoco_config(config_file)
 
-load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -34,16 +35,26 @@ bot = commands.Bot(command_prefix="!", intents=intents, case_insensitive=True)
 bot.configs_list = configs_list
 bot.almoco_list = almoco_frases_list
 
-COGS = ["cogs.commands", "cogs.events", "cogs.tasks", "cogs.daily_citation"]
+notification_server = NotificationServer(
+    bot=bot,
+    host=settings.HTTP_SERVER_HOST,
+    port=settings.HTTP_SERVER_PORT,
+    channel_id=settings.NOTIFICATION_CHANNEL_ID
+)
 
+COGS = [
+    "cogs.commands"
+]
 
 async def load_extensions(bot):
+    bot_logger.info(f"Iniciando carregamento de {len(COGS)} cog(s)...")
     for cog in COGS:
+        bot_logger.info(f"Tentando carregar: {cog}")
         try:
             await bot.load_extension(cog)
-            bot_logger.info(f"Carregado cog: {cog}")
+            bot_logger.info(f"✅ Carregado cog: {cog}")
         except Exception as e:
-            bot_logger.error(f"Falha ao carregar cog {cog}: {e}", exc_info=True)
+            bot_logger.error(f"❌ Falha ao carregar cog {cog}: {e}", exc_info=True)
 
 
 @bot.event
@@ -53,8 +64,17 @@ async def on_ready():
 
 async def main():
     await load_extensions(bot)
-    bot_logger.info("Iniciando bot...")
-    await bot.start(settings.TOKEN)
+
+    bot_logger.info("Iniciando HTTP server para notificações...")
+    http_runner = await notification_server.start()
+
+    try:
+        bot_logger.info("Iniciando bot...")
+        await bot.start(settings.TOKEN)
+    except Exception as e:
+        bot_logger.error(f"Erro ao iniciar bot: {e}", exc_info=True)
+        await http_runner.cleanup()
+        raise
 
 
 if __name__ == "__main__":

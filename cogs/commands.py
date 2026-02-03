@@ -9,8 +9,9 @@ from discord import FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
 
 import config.settings
+from client.google_client import search_images
 from config.config_loader import register_media_commands
-from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar, search_images
+from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 
@@ -55,7 +56,7 @@ class Commands(commands.Cog):
     class ImagePaginator(discord.ui.View):
         def __init__(self, results, query, author_id, timeout=300):
             super().__init__(timeout=timeout)
-            self.results = results
+            self.results = results  # lista de dicts com 'title' e 'link'
             self.query = query
             self.index = 0
             self.author_id = author_id
@@ -83,9 +84,12 @@ class Commands(commands.Cog):
             if self.index > 0:
                 self.index -= 1
             self._update_button_states()
-            embed = discord.Embed(title=f"{self.query} ({self.index+1}/{len(self.results)})")
-            embed.set_image(url=self.results[self.index])
-            logger.info(f"Embed URL set to: {embed.image.url}")
+            current_result = self.results[self.index]
+            title = current_result["title"]
+            url = current_result["link"]
+            embed = discord.Embed(title=f"{title} ({self.index+1}/{len(self.results)})", url=url)
+            embed.set_image(url=url)
+            logger.info(f"Embed URL set to: {url}")
             await interaction.response.edit_message(embed=embed, view=self)
 
         @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
@@ -93,9 +97,12 @@ class Commands(commands.Cog):
             if self.index < len(self.results) - 1:
                 self.index += 1
             self._update_button_states()
-            embed = discord.Embed(title=f"{self.query} ({self.index+1}/{len(self.results)})")
-            embed.set_image(url=self.results[self.index])
-            logger.info(f"Embed URL set to: {embed.image.url}")
+            current_result = self.results[self.index]
+            title = current_result["title"]
+            url = current_result["link"]
+            embed = discord.Embed(title=f"{title} ({self.index+1}/{len(self.results)})", url=url)
+            embed.set_image(url=url)
+            logger.info(f"Embed URL set to: {url}")
             await interaction.response.edit_message(embed=embed, view=self)
     @commands.command()
     async def join(self, ctx):
@@ -351,26 +358,28 @@ class Commands(commands.Cog):
                 results = await search_images(query, max_results=10)
         except Exception as e:
             logger.error(f"Erro na busca de imagens: {e}")
-            await ctx.send(f".img {query}")
+            await ctx.send(f"Nao deu")
             return
 
         if not results:
-            await ctx.send("Não encontrei imagens para essa busca.")
-            await ctx.send(f".img {query}")
+            await ctx.send("Nao veio nada nao reclama com o google")
             return
 
-        #Printar tamanho antes dos filtros
-        logger.info(f"Tamanho antes dos filtros: {len(results)}")
+        logger.info(f"Tamanho de resultados: {len(results)}")
 
-        results = [url for url in results if re.search(r'\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg)(\?|$)', url, re.IGNORECASE)]
-
-        logger.info(f"Tamanho depois dos filtros: {len(results)}")
+        if not results:
+            await ctx.send("Nenhuma imagem válida encontrada")
+            return
 
         view = self.ImagePaginator(results, query, ctx.author.id)
         view._update_button_states()
-        embed = discord.Embed(title=f"{query} (1/{len(results)})")
-        embed.set_image(url=results[0])
-        #logger.info(f"Embed URL set to: {embed.image.url}")
+
+        first_result = results[0]
+        title = first_result["title"]
+        url = first_result["link"]
+
+        embed = discord.Embed(title=f"{title} (1/{len(results)})", url=url)
+        embed.set_image(url=url)
 
         sent = await ctx.send(embed=embed, view=view)
         view.message = sent

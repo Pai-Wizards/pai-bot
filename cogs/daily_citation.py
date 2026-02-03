@@ -35,7 +35,15 @@ class DailyCitation(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.daily_citation.start()
+        self._task_started = False
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Inicia a task quando o bot estiver pronto e conectado."""
+        if not self._task_started:
+            logger.info("Bot pronto! Iniciando task daily_citation...")
+            self.daily_citation.start()
+            self._task_started = True
 
     @tasks.loop(hours=24)
     async def daily_citation(self):
@@ -94,8 +102,15 @@ class DailyCitation(commands.Cog):
 
     @daily_citation.before_loop
     async def before_daily_citation(self):
+        logger.info("Aguardando bot ficar pronto antes de iniciar daily_citation...")
         await self.bot.wait_until_ready()
+        logger.info("Bot pronto! Iniciando daily_citation loop...")
+
+    def cog_unload(self):
+        self.daily_citation.cancel()
 
 
 async def setup(bot):
-    await bot.add_cog(DailyCitation(bot))
+    cog = DailyCitation(bot)
+    await bot.add_cog(cog)
+    logger.info("Cog DailyCitation carregado (task será iniciada quando bot estiver pronto)")
