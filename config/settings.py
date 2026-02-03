@@ -11,6 +11,7 @@ CITATION = int(os.getenv("CITATION", "0"))
 HTTP_SERVER_HOST = os.getenv("HTTP_SERVER_HOST", "0.0.0.0")
 HTTP_SERVER_PORT = int(os.getenv("HTTP_SERVER_PORT", "8081"))
 NOTIFICATION_CHANNEL_ID = int(os.getenv("NOTIFICATION_CHANNEL_ID", "0"))
+USER_ID = int(os.getenv("USER_ID", "0"))
 
 TAKES_FILE = "take.json"
 CONFIG_FILE = "pai_config.json"
