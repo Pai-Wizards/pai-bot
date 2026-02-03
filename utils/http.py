@@ -5,22 +5,6 @@ import aiohttp
 import requests
 import logging
 
-
-# duckduckgo_search has changed APIs across versions.
-# Try to import an async interface first; otherwise fall back to sync function.
-try:
-    from duckduckgo_search import AsyncDDGS
-    _DDG_ASYNC = True
-    _ddg_sync = None
-except Exception:
-    try:
-        from duckduckgo_search import ddg_images
-        _DDG_ASYNC = False
-        _ddg_sync = ddg_images
-    except Exception:
-        _DDG_ASYNC = None
-        _ddg_sync = None
-
 logger = logging.getLogger("bot_logger")
 
 
