@@ -9,6 +9,7 @@ from discord import FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
 
 import config.settings
+from client.duck_client import duck_search_images as search_images_duck
 from client.google_client import search_images
 from config.config_loader import register_media_commands
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
@@ -362,8 +363,16 @@ class Commands(commands.Cog):
             return
 
         if not results:
-            await ctx.send("Nao veio nada nao reclama com o google")
-            return
+            try:
+                results = await search_images_duck(query, max_results=10)
+            except Exception as e:
+                logger.error(f"Erro na busca DuckDuckGo: {e}")
+                await ctx.send("Nao veio nada nao reclama com o google")
+                return
+
+            if not results:
+                await ctx.send("Nao veio nada nao reclama com o google")
+                return
 
         logger.info(f"Tamanho de resultados: {len(results)}")
 
