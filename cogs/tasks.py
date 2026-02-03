@@ -10,9 +10,14 @@ logger = logging.getLogger("bot_logger")
 class Tasks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_ready(self):
         if not self.check_record.is_running():
             self.check_record.start()
+        if not self.leave_if_alone.is_running():
             self.leave_if_alone.start()
+        if not self.music.is_running():
             self.music.start()
 
     @tasks.loop(minutes=5)
