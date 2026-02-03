@@ -43,7 +43,10 @@ notification_server = NotificationServer(
 )
 
 COGS = [
-    "cogs.commands"
+    "cogs.commands",
+    "cogs.events",
+    "cogs.tasks",
+    "cogs.daily_citation"
 ]
 
 async def load_extensions(bot):
