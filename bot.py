@@ -55,9 +55,9 @@ async def load_extensions(bot):
         bot_logger.info(f"Tentando carregar: {cog}")
         try:
             await bot.load_extension(cog)
-            bot_logger.info(f"✅ Carregado cog: {cog}")
+            bot_logger.info(f"Carregado cog: {cog}")
         except Exception as e:
-            bot_logger.error(f"❌ Falha ao carregar cog {cog}: {e}", exc_info=True)
+            bot_logger.error(f"Falha ao carregar cog {cog}: {e}", exc_info=True)
 
 
 @bot.event
@@ -86,5 +86,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         bot_logger.warning("Bot foi interrompido pelo usuário (Ctrl+C). Desconectando...")
         asyncio.run(bot.close())
+
     except Exception as e:
         bot_logger.critical(f"Ocorreu um erro inesperado: {e}", exc_info=True)
