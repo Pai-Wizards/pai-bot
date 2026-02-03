@@ -73,6 +73,9 @@ class Events(commands.Cog):
         if self.bot.user.mentioned_in(message):
             logger.info(f"Bot mencionado por {message.author} no canal {message.channel.name}")
 
+            if random.random() < 0.9:
+                return
+
             if not on_cooldown(message.author.id, self.bot.configs_list["cooldown"]):
                 xingamento = await xingar()
                 if xingamento:
