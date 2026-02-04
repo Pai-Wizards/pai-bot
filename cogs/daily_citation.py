@@ -50,7 +50,7 @@ class DailyCitation(commands.Cog):
             self.daily_citation.start()
             self._task_started = True
 
-    @tasks.loop(hours=24)
+    @tasks.loop(hours=8)
     async def daily_citation(self):
         logger.info("Executando daily_citation")
 
