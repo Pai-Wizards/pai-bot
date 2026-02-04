@@ -55,7 +55,8 @@ class SubscriptionsPaginator(discord.ui.View):
         profile = user.get("profile_image_url") or ""
 
         title = f"{display} ({idx+1}/{len(self.subs)})"
-        embed = discord.Embed(title=title, description=description or "—")
+        streamer_url = f"https://twitch.tv/{user.get('login', broadcaster_id)}"
+        embed = discord.Embed(title=title, description=description or "—", url=streamer_url)
         if profile:
             embed.set_thumbnail(url=profile)
 
