@@ -7,10 +7,18 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    ports:
+      - "${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}"
     volumes:
       - ./pai_config.json:/app/pai_config.json
       - ./assets:/app/images
       - ./take.json:/app/take.json
     environment:
       - TZ=America/Sao_Paulo
+    networks:
+      - app-network
     command: python bot.py
+
+networks:
+  app-network:
+    driver: bridge
