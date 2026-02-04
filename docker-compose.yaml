@@ -21,4 +21,4 @@ services:
 
 networks:
   app-network:
-    driver: external
+    external: true
