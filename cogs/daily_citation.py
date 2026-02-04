@@ -2,6 +2,7 @@ import json
 import os
 import random
 import logging
+from datetime import date
 
 from discord.ext import commands, tasks
 import config.settings
@@ -11,22 +12,26 @@ logger = logging.getLogger("bot_logger")
 STATE_FILE = "daily_citation_state.json"
 
 
-def load_last_citation():
+def load_state():
+    """Retorna dict com keys: last_message_id (int|None) e last_date (YYYY-MM-DD|None)."""
     if not os.path.exists(STATE_FILE):
-        return None
+        return {"last_message_id": None, "last_date": None}
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("last_message_id")
+            return {
+                "last_message_id": data.get("last_message_id"),
+                "last_date": data.get("last_date"),
+            }
     except Exception as e:
         logger.error("Erro ao carregar estado: %s", e)
-        return None
+        return {"last_message_id": None, "last_date": None}
 
 
-def save_last_citation(message_id: int):
+def save_state(message_id: int, date_str: str):
     try:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump({"last_message_id": message_id}, f)
+            json.dump({"last_message_id": message_id, "last_date": date_str}, f)
     except Exception as e:
         logger.error("Erro ao salvar estado: %s", e)
 
@@ -64,7 +69,15 @@ class DailyCitation(commands.Cog):
             logger.error("Canal de anúncio (ANNOUNCE_CHANNEL_ID) não encontrado")
             return
 
-        last_id = load_last_citation()
+        state = load_state()
+        today_str = date.today().isoformat()
+
+        # Se já houver citação hoje, ignora
+        if state.get("last_date") == today_str:
+            logger.info("Já enviada citação hoje (%s). Ignorando execução.", today_str)
+            return
+
+        last_id = state.get("last_message_id")
 
         chosen = None
         count = 0
@@ -74,6 +87,7 @@ class DailyCitation(commands.Cog):
                 continue
             if not msg.content or not msg.content.strip():
                 continue
+            # evita reenviar a mensagem que foi usada anteriormente (se existir)
             if last_id is not None and msg.id == last_id:
                 continue
 
@@ -92,12 +106,13 @@ class DailyCitation(commands.Cog):
         )
 
         await target_channel.send(f"{prefix_text}{chosen.content}")
-        save_last_citation(chosen.id)
+        save_state(chosen.id, today_str)
 
         logger.info(
-            "Citação enviada (msg_id=%s, total_validas=%d)",
+            "Citação enviada (msg_id=%s, total_validas=%d, date=%s)",
             chosen.id,
-            count
+            count,
+            today_str
         )
 
     @daily_citation.before_loop
