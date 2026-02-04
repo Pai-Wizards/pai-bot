@@ -43,19 +43,27 @@ class TwitchClient:
         self._token_expires_at = time.time() + int(expires_in) - 30
         return self._token
 
-    def get_user_images(self, login: str) -> Optional[Dict[str, Optional[str]]]:
-        """
-        Busca profile_image_url e offline_image_url para o login informado.
-        Retorna dict { 'profile_image_url': str|None, 'offline_image_url': str|None } ou None se usuário não encontrado.
-        Pode lançar RuntimeError em caso de falha na requisição.
-        """
+    def get_user(self, login_or_id: str) -> Optional[Dict[str, Optional[str]]]:
         token = self.get_app_access_token()
         url = "https://api.twitch.tv/helix/users"
         headers = {
             "Authorization": f"Bearer {token}",
             "Client-Id": self.client_id or "",
         }
-        params = {"login": login}
+
+        login_or_id = str(login_or_id).strip()
+        # extrai username se for uma URL do twitch
+        if "twitch.tv" in login_or_id:
+            try:
+                login_or_id = login_or_id.rstrip("/").split("/")[-1]
+            except Exception:
+                pass
+
+        params = {}
+        if login_or_id.isdigit():
+            params["id"] = login_or_id
+        else:
+            params["login"] = login_or_id.lower()
 
         resp = requests.get(url, headers=headers, params=params, timeout=10)
         if resp.status_code != 200:
@@ -70,4 +78,48 @@ class TwitchClient:
         return {
             "profile_image_url": user.get("profile_image_url"),
             "offline_image_url": user.get("offline_image_url"),
+            "id": user.get("id"),
+            "login": user.get("login"),
+            "display_name": user.get("display_name"),
+            "description": user.get("description"),  # ADICIONADO
         }
+
+    def subscribe_eventsub(self, broadcaster_user_id: str, callback_url: str, secret: Optional[str] = None) -> Dict:
+        """
+        Cria uma subscription EventSub (stream.online) para o broadcaster_user_id.
+        Em caso de subscription já existente (409) retorna um objeto indicando isso ao invés de lançar.
+        """
+        token = self.get_app_access_token()
+        url = "https://api.twitch.tv/helix/eventsub/subscriptions"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Client-Id": self.client_id or "",
+            "Content-Type": "application/json",
+        }
+        body = {
+            "type": "stream.online",
+            "version": "1",
+            "condition": {"broadcaster_user_id": str(broadcaster_user_id)},
+            "transport": {
+                "method": "webhook",
+                "callback": callback_url,
+                "secret": secret or ""
+            }
+        }
+
+        resp = requests.post(url, headers=headers, json=body, timeout=10)
+
+        # Trata caso onde já existe subscription (409) sem lançar
+        if resp.status_code == 409:
+            try:
+                detail = resp.json()
+            except Exception:
+                detail = {"message": resp.text}
+            return {"status": "exists", "detail": detail}
+
+        if resp.status_code not in (200, 201, 202):
+            raise RuntimeError(f"Falha ao criar EventSub: {resp.status_code} {resp.text}")
+        try:
+            return {"status": "created", "detail": resp.json()}
+        except Exception:
+            return {"status": "created", "detail": {}}

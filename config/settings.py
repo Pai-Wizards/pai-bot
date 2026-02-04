@@ -16,6 +16,8 @@ USER_ID = int(os.getenv("USER_ID", "0"))
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 
+# URL público onde seu app recebe webhooks do Twitch (ex: https://app.hfpaisagismo.com/webhooks/twitch)
+TWITCH_EVENTSUB_CALLBACK = os.getenv("TWITCH_EVENTSUB_CALLBACK")
 
 TAKES_FILE = "take.json"
 CONFIG_FILE = "pai_config.json"
