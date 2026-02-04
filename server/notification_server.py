@@ -121,13 +121,17 @@ class NotificationServer:
                 profile_img = images.get("profile_image_url")
                 offline_img = images.get("offline_image_url")
 
+            streamer_url = f"https://twitch.tv/{streamer}"
+
             embed = discord.Embed(
                 title=f"{status_emoji} {streamer} {status_text}",
                 color=discord.Color.green() if status else discord.Color.red(),
                 timestamp=dt,
+                url=streamer_url,
             )
             embed.add_field(name="Streamer", value=streamer, inline=True)
             embed.add_field(name="Status", value="Online 🟢" if status else "Offline 🔴", inline=True)
+            embed.add_field(name="Link", value=streamer_url, inline=False)
             embed.set_footer(text=f"Notificação automática • {time_str}")
 
             if profile_img:

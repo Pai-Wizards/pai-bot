@@ -407,8 +407,9 @@ class Commands(commands.Cog):
         if len(description) > 80:
             description = description[:77] + "..."
         profile = user.get("profile_image_url") or ""
+        streamer_url = f"https://twitch.tv/{mensagem}"
 
-        embed = discord.Embed(title=display, description=description)
+        embed = discord.Embed(title=display, description=description, url=streamer_url,)
         if profile:
             embed.set_thumbnail(url=profile)
 
