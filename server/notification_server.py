@@ -20,7 +20,6 @@ class NotificationServer:
         self.app = web.Application()
         self._setup_routes()
 
-        # instancia TwitchClient com credenciais do settings (se existirem)
         self.twitch = TwitchClient(
             getattr(config.settings, "TWITCH_CLIENT_ID", None),
             getattr(config.settings, "TWITCH_CLIENT_SECRET", None),
@@ -112,7 +111,7 @@ class NotificationServer:
             images = None
             try:
                 loop = asyncio.get_running_loop()
-                images = await loop.run_in_executor(None, self.twitch.get_user_images, streamer)
+                images = await loop.run_in_executor(None, self.twitch.get_user, streamer)
             except Exception as e:
                 logger.warning(f"Não foi possível obter imagens do Twitch para '{streamer}': {e}")
 
