@@ -5,6 +5,7 @@ from datetime import datetime
 from aiohttp import web
 import discord
 import config.settings
+from client.twitch_client import TwitchClient
 
 logger = logging.getLogger("bot_logger")
 
@@ -18,6 +19,12 @@ class NotificationServer:
         self.channel_id = channel_id
         self.app = web.Application()
         self._setup_routes()
+
+        # instancia TwitchClient com credenciais do settings (se existirem)
+        self.twitch = TwitchClient(
+            getattr(config.settings, "TWITCH_CLIENT_ID", None),
+            getattr(config.settings, "TWITCH_CLIENT_SECRET", None),
+        )
 
     def _setup_routes(self):
         self.app.router.add_post("/event", self.handle_event)
@@ -102,6 +109,19 @@ class NotificationServer:
                 time_str = timestamp
                 dt = None
 
+            images = None
+            try:
+                loop = asyncio.get_running_loop()
+                images = await loop.run_in_executor(None, self.twitch.get_user_images, streamer)
+            except Exception as e:
+                logger.warning(f"Não foi possível obter imagens do Twitch para '{streamer}': {e}")
+
+            profile_img = None
+            offline_img = None
+            if images:
+                profile_img = images.get("profile_image_url")
+                offline_img = images.get("offline_image_url")
+
             embed = discord.Embed(
                 title=f"{status_emoji} {streamer} {status_text}",
                 color=discord.Color.green() if status else discord.Color.red(),
@@ -111,7 +131,17 @@ class NotificationServer:
             embed.add_field(name="Status", value="Online 🟢" if status else "Offline 🔴", inline=True)
             embed.set_footer(text=f"Notificação automática • {time_str}")
 
+            if profile_img:
+                embed.set_thumbnail(url=profile_img)
+
             if not status:
+                image_to_use = offline_img or profile_img
+                if image_to_use:
+                    try:
+                        embed.set_image(url=image_to_use)
+                    except Exception as e:
+                        logger.warning(f"Falha ao definir imagem no embed para '{streamer}': {e}")
+
                 embed.description = f"<@{config.settings.USER_ID}> pode ir dormir agora"
 
             await channel.send(embed=embed)
