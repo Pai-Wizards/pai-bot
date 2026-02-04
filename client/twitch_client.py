@@ -123,3 +123,35 @@ class TwitchClient:
             return {"status": "created", "detail": resp.json()}
         except Exception:
             return {"status": "created", "detail": {}}
+
+    def list_eventsub_subscriptions(self) -> Dict[str, list]:
+        """
+        Retorna dict com keys: 'total' e 'data' (lista de subscriptions).
+        Itera paginação (cursor 'after') para retornar todas as subscriptions.
+        Lança RuntimeError em caso de erro HTTP.
+        """
+        token = self.get_app_access_token()
+        url = "https://api.twitch.tv/helix/eventsub/subscriptions"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Client-Id": self.client_id or "",
+        }
+
+        all_items = []
+        params = {}
+        while True:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Falha ao listar EventSub: {resp.status_code} {resp.text}")
+            data = resp.json()
+            items = data.get("data", [])
+            all_items.extend(items)
+
+            pagination = data.get("pagination", {}) or {}
+            cursor = pagination.get("cursor")
+            if cursor:
+                params["after"] = cursor
+                continue
+            break
+
+        return {"total": len(all_items), "data": all_items}
