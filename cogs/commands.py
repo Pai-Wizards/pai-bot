@@ -16,7 +16,7 @@ from cogs.ui.subscriptions_paginator import SubscriptionsPaginator
 from client.duck_client import search_images as search_images_duck
 from client.google_client import search_images
 from config.config_loader import register_media_commands
-from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
+from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar, get_timestamp
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
 # novo import e instancia do client Twitch
@@ -55,13 +55,6 @@ async def generic_take(ctx, take_type: str):
         f"TOTAL DE {take_type.upper()}: {take_data['total']} \n"
         f"🚜 COLABORE PARA MELHORAR ESSE ÍNDICE!"
     )
-
-def get_timestamp() -> str:
-    try:
-        dt = datetime.now(timezone.utc)
-        return dt.strftime("%d/%m/%Y %H:%M:%S UTC")
-    except Exception:
-        return datetime.now(timezone.utc).isoformat()
 
 class Commands(commands.Cog):
     def __init__(self, bot):

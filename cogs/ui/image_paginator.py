@@ -2,6 +2,8 @@ import discord
 import logging
 from urllib.parse import urlparse
 
+from utils.http import get_timestamp
+
 logger = logging.getLogger("bot_logger")
 
 class ImagePaginator(discord.ui.View):
@@ -15,11 +17,13 @@ class ImagePaginator(discord.ui.View):
         self.author_avatar = ctx.author.avatar.url if ctx.author.avatar else None
         self.message = None
         self.search_engine = search_engine
+        self.time_str = get_timestamp()
 
     def _build_embed(self) -> discord.Embed:
         result = self.results[self.index]
         title = result["title"]
         url = result["link"]
+
         domain = urlparse(url).netloc
 
         embed = discord.Embed(
@@ -29,7 +33,7 @@ class ImagePaginator(discord.ui.View):
         )
         embed.set_author(name=self.author_name, icon_url=self.author_avatar)
         embed.set_image(url=url)
-        embed.set_footer(text=f"Página {self.index + 1}/{len(self.results)} - {self.search_engine}")
+        embed.set_footer(text=f"Página {self.index + 1}/{len(self.results)} - {self.search_engine} • {self.time_str}")
         return embed
 
     async def on_timeout(self) -> None:

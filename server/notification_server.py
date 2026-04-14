@@ -6,6 +6,7 @@ from aiohttp import web
 import discord
 import config.settings
 from client.twitch_client import TwitchClient
+from utils.http import get_timestamp
 
 logger = logging.getLogger("bot_logger")
 
@@ -103,7 +104,7 @@ class NotificationServer:
 
             try:
                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                time_str = dt.strftime("%d/%m/%Y %H:%M:%S UTC")
+                time_str = get_timestamp()
             except Exception:
                 time_str = timestamp
                 dt = None

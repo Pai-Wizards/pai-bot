@@ -1,11 +1,21 @@
 import html
 import re
+import logging
+from datetime import datetime, timezone
 
 import aiohttp
 import requests
-import logging
 
 logger = logging.getLogger("bot_logger")
+
+
+def get_timestamp() -> str:
+    """Get current local timestamp in formatted string."""
+    try:
+        dt = datetime.now()
+        return dt.strftime("%d/%m/%Y %H:%M:%S")
+    except Exception:
+        return datetime.now().isoformat()
 
 
 async def fetch_http_dog_image(http, flag):
