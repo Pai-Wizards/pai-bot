@@ -145,7 +145,7 @@ class NotificationServer:
                     except Exception as e:
                         logger.warning(f"Falha ao definir imagem no embed para '{streamer}': {e}")
 
-                embed.description = f"<@{config.settings.USER_ID}> pode ir dormir agora"
+                embed.description = f"<@{config.settings.USER_ID}> もう寝ていいよ、レップ！"
 
             await channel.send(embed=embed)
             logger.info(f"✅ Notificação enviada ao Discord: {streamer} - {status_text}")
