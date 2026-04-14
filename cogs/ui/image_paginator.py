@@ -1,16 +1,36 @@
 import discord
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger("bot_logger")
 
 class ImagePaginator(discord.ui.View):
-    def __init__(self, results, query, author_id, timeout=300):
+    def __init__(self, results, query, ctx, timeout=300, search_engine="DuckDuckGo"):
         super().__init__(timeout=timeout)
-        self.results = results  # lista de dicts com 'title' e 'link'
+        self.results = results
         self.query = query
         self.index = 0
-        self.author_id = author_id
+        self.author_id = ctx.author.id
+        self.author_name = ctx.author.display_name
+        self.author_avatar = ctx.author.avatar.url if ctx.author.avatar else None
         self.message = None
+        self.search_engine = search_engine
+
+    def _build_embed(self) -> discord.Embed:
+        result = self.results[self.index]
+        title = result["title"]
+        url = result["link"]
+        domain = urlparse(url).netloc
+
+        embed = discord.Embed(
+            title=title,
+            description=f"[{domain}]({url})",
+            url=url,
+        )
+        embed.set_author(name=self.author_name, icon_url=self.author_avatar)
+        embed.set_image(url=url)
+        embed.set_footer(text=f"Página {self.index + 1}/{len(self.results)} - {self.search_engine}")
+        return embed
 
     async def on_timeout(self) -> None:
         for item in self.children:
@@ -22,7 +42,6 @@ class ImagePaginator(discord.ui.View):
                 pass
 
     def _update_button_states(self):
-        # Disable prev on first, next on last
         for child in self.children:
             if getattr(child, "custom_id", None) == "prev_btn":
                 child.disabled = (self.index == 0)
@@ -31,26 +50,30 @@ class ImagePaginator(discord.ui.View):
 
     @discord.ui.button(label="Anterior", style=discord.ButtonStyle.secondary, custom_id="prev_btn")
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Não é contigo 😿", ephemeral=True)
+            return
         if self.index > 0:
             self.index -= 1
         self._update_button_states()
-        current_result = self.results[self.index]
-        title = current_result["title"]
-        url = current_result["link"]
-        embed = discord.Embed(title=f"{title} ({self.index + 1}/{len(self.results)})", url=url)
-        embed.set_image(url=url)
-        logger.info(f"Embed URL set to: {url}")
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
     @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Não é contigo 😿", ephemeral=True)
+            return
         if self.index < len(self.results) - 1:
             self.index += 1
         self._update_button_states()
-        current_result = self.results[self.index]
-        title = current_result["title"]
-        url = current_result["link"]
-        embed = discord.Embed(title=f"{title} ({self.index + 1}/{len(self.results)})", url=url)
-        embed.set_image(url=url)
-        logger.info(f"Embed URL set to: {url}")
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
+
+    @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary, custom_id="shuffle_btn")
+    async def shuffle_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Não é contigo 😿", ephemeral=True)
+            return
+        import random
+        self.index = random.randint(0, len(self.results) - 1)
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
