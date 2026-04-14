@@ -13,7 +13,7 @@ from cogs.ui.image_paginator import ImagePaginator
 
 from cogs.ui.subscriptions_paginator import SubscriptionsPaginator
 
-from client.duck_client import duck_search_images as search_images_duck
+from client.duck_client import search_images as search_images_duck
 from client.google_client import search_images
 from config.config_loader import register_media_commands
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar
@@ -317,42 +317,66 @@ class Commands(commands.Cog):
             await ctx.invoke(self.bot.get_command("javascript"))
             return
 
+        local_search_engine = "Google"
+
         try:
             async with ctx.typing():
                 results = await search_images(query, max_results=10)
+                logger.info(f"Resultados obtidos do Google para '{query}'")
         except Exception as e:
             logger.error(f"Erro na busca de imagens: {e}")
-            await ctx.send(f"Nao deu")
+            await ctx.send("Nao deu")
             return
 
         if not results:
             try:
-                results = await search_images_duck(query, max_results=10)
+                logger.info("Utilizando fallback DuckDuckGo para busca de imagens")
+                local_search_engine = "DuckDuckGo (fallback)"
+                results = await search_images_duck(query, max_results=20)
             except Exception as e:
                 logger.error(f"Erro na busca DuckDuckGo: {e}")
-                await ctx.send("Nao veio nada nao 😿 reclama com o google")
+                await ctx.send("To naum 😿 reclama com o google")
                 return
 
             if not results:
-                await ctx.send("Nao veio nada nao 😿 reclama com o google")
+                await ctx.send("To naum 😿 reclama com o google")
                 return
 
-        logger.info(f"Tamanho de resultados: {len(results)}")
-
-        if not results:
-            await ctx.send("Nenhuma imagem válida encontrada 😿")
-            return
-
-        view = ImagePaginator(results, query, ctx.author.id)
+        view = ImagePaginator(results, query, ctx, timeout=300, search_engine=local_search_engine)
         view._update_button_states()
 
-        first_result = results[0]
-        title = first_result["title"]
-        url = first_result["link"]
+        embed = view._build_embed()
+        sent = await ctx.send(embed=embed, view=view)
+        view.message = sent
 
-        embed = discord.Embed(title=f"{title} (1/{len(results)})", url=url)
-        embed.set_image(url=url)
+    @commands.command(name="duck")
+    async def duck_images(self, ctx, *, query: str = None):
+        """Busca imagens usando DuckDuckGo"""
+        if not query:
+            await ctx.invoke(self.bot.get_command("javascript"))
+            return
 
+        try:
+            async with ctx.typing():
+                results = await search_images_duck(query, max_results=20)
+        except Exception as e:
+            logger.error(f"Erro na busca DuckDuckGo: {e}")
+            await ctx.send("Nao deu")
+            return
+
+        if not results:
+            await ctx.send("To naum 😿 reclama com o duckduckgo")
+            return
+
+        view = ImagePaginator(
+            results,
+            query,
+            ctx,
+            search_engine="DuckDuckGo"
+        )
+        view._update_button_states()
+
+        embed = view._build_embed()
         sent = await ctx.send(embed=embed, view=view)
         view.message = sent
 
@@ -396,7 +420,12 @@ class Commands(commands.Cog):
         secret = config.settings.TWITCH_CLIENT_SECRET or ""
 
         try:
-            result = await loop.run_in_executor(None, twitch_client.subscribe_eventsub, broadcaster_id, callback, secret)
+            result = await loop.run_in_executor(
+                None,
+                twitch_client.subscribe_eventsub,
+                broadcaster_id,
+                callback,
+                secret)
         except Exception as e:
             logger.error(f"Erro ao criar subscription: {e}", exc_info=True)
             await ctx.send(f"Nao foi possivel criar a subscription 😿")
@@ -554,7 +583,6 @@ class Commands(commands.Cog):
                     user = None
             subs_with_users.append({"sub": sub, "user": user})
 
-        # usa a classe importada (não mais self.SubscriptionsPaginator)
         view = SubscriptionsPaginator(subs_with_users, ctx.author.id)
         view._update_button_states()
 
