@@ -1,85 +1,81 @@
+"""
+image_search.py — busca de imagens via DuckDuckGo.
+"""
+from __future__ import annotations
+
+import asyncio
 import logging
-from typing import List, Dict
+from typing import Final, TypedDict
 
 from duckduckgo_search import DDGS
 
 logger = logging.getLogger("bot_logger")
 
-VALID_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp", "bmp"}
-
-def _has_valid_extension(url: str) -> bool:
-    url = url.split("?", 1)[0]
-    if "." not in url:
-        return False
-    ext = url.rsplit(".", 1)[-1].lower()
-    return ext in VALID_EXTENSIONS
+_DEFAULT_TIMEOUT: Final[float] = 15.0
+_MAX_RETRIES: Final[int] = 3
+_RETRY_BASE_DELAY: Final[float] = 1.0
 
 
-def _duck_search_images_sync(query: str, max_results: int = 10) -> List[Dict[str, str]]:
-    logger.info(f"Buscando imagens no DuckDuckGo para: '{query}' (max_results={max_results})")
+class ImageResult(TypedDict):
+    title: str
+    link: str
 
-    results: List[Dict[str, str]] = []
 
-    try:
-        with DDGS() as ddgs:
-            raw_results = ddgs.images(
-                keywords=query,
-                region="wt-wt",
-                safesearch="off",
-                size=None,
-                color=None,
-                type_image=None,
-                layout=None,
-                license_image=None,
-                max_results=max_results * 3,
-            )
+def _search_sync(query: str, max_results: int) -> list[ImageResult]:
+    raw = DDGS().images(keywords=query, region="wt-wt", safesearch="off", max_results=max_results)
 
-        if not raw_results:
-            logger.warning(f"DuckDuckGo não retornou resultados para: {query}")
-            return []
+    return [
+        ImageResult(title=item.get("title") or "Sem título", link=item["image"])
+        for item in raw or []
+        if item.get("image")
+    ]
 
-        for item in raw_results:
-            # Estrutura típica do DDGS().images():
-            # {
-            #   "title": str,
-            #   "image": "https://... .jpg",
-            #   "thumbnail": "https://...",
-            #   "url": "https://página-de-origem",
-            #   ...
-            # }
-            image_url = item.get("image")
-            title = item.get("title") or "Sem título"
 
-            if not image_url:
-                continue
+async def search_images(
+    query: str,
+    max_results: int = 20,
+    *,
+    timeout: float = _DEFAULT_TIMEOUT,
+    retries: int = _MAX_RETRIES,
+) -> list[ImageResult]:
+    """
+    Busca imagens no DuckDuckGo de forma assíncrona.
 
-            if not _has_valid_extension(image_url):
-                continue
+    Args:
+        query:       Termo de busca.
+        max_results: Número máximo de resultados.
+        timeout:     Tempo máximo por tentativa em segundos.
+        retries:     Tentativas em caso de erro transitório.
 
-            results.append({"title": title, "link": image_url})
-
-            if len(results) >= max_results:
-                break
-
-        logger.info(f"DuckDuckGo retornou {len(results)} imagens válidas para '{query}'")
-        return results
-
-    except Exception as e:
-        logger.error(f"Erro ao buscar imagens com DuckDuckGo: {e}")
+    Returns:
+        Lista de dicts com ``title`` e ``link``. Vazia em caso de falha.
+    """
+    if not query or not query.strip():
+        logger.warning("search_images chamado com query vazia — abortando.")
         return []
 
+    logger.info("Buscando imagens: %r (max=%d)", query, max_results)
+    last_exc: BaseException | None = None
 
-async def search_images_duck(query: str, max_results: int = 10) -> List[Dict[str, str]]:
-    import asyncio
+    for attempt in range(1, retries + 1):
+        try:
+            results = await asyncio.wait_for(
+                asyncio.to_thread(_search_sync, query, max_results),
+                timeout=timeout,
+            )
+            logger.info("%d imagem(ns) retornada(s) para %r", len(results), query)
+            return results
 
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        None,
-        _duck_search_images_sync,
-        query,
-        max_results,
-    )
+        except TimeoutError:
+            last_exc = TimeoutError(f"Timeout após {timeout}s")
+            logger.warning("Timeout (tentativa %d/%d)", attempt, retries)
 
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            logger.warning("Erro (tentativa %d/%d): %s", attempt, retries, exc)
 
-async def duck_search_images(query: str, max_results: int = 10) -> List[Dict[str, str]]:
-    return await search_images_duck(query, max_results)
+        if attempt < retries:
+            await asyncio.sleep(_RETRY_BASE_DELAY * (2 ** (attempt - 1)))
+
+    logger.error("Todas as tentativas falharam para %r: %s", query, last_exc)
+    return []
