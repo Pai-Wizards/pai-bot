@@ -54,9 +54,6 @@ class ImagePaginator(discord.ui.View):
 
     @discord.ui.button(label="Anterior", style=discord.ButtonStyle.secondary, custom_id="prev_btn")
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message("Não é contigo 😿", ephemeral=True)
-            return
         if self.index > 0:
             self.index -= 1
         self._update_button_states()
@@ -64,9 +61,6 @@ class ImagePaginator(discord.ui.View):
 
     @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message("Não é contigo 😿", ephemeral=True)
-            return
         if self.index < len(self.results) - 1:
             self.index += 1
         self._update_button_states()
@@ -74,9 +68,6 @@ class ImagePaginator(discord.ui.View):
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary, custom_id="shuffle_btn")
     async def shuffle_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message("Não é contigo 😿", ephemeral=True)
-            return
         import random
         self.index = random.randint(0, len(self.results) - 1)
         self._update_button_states()
