@@ -22,7 +22,7 @@ class ImageResult(TypedDict):
 
 
 def _search_sync(query: str, max_results: int) -> list[ImageResult]:
-    raw = DDGS().images(keywords=query, region="wt-wt", safesearch="off", max_results=max_results)
+    raw = DDGS().images(query=query, region="wt-wt", safesearch="off", max_results=max_results)
 
     return [
         ImageResult(title=item.get("title") or "Sem título", link=item["image"])
