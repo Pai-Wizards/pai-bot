@@ -1,3 +1,4 @@
+from discord import PCMVolumeTransformer
 from discord.ext import tasks, commands
 import logging
 import config.settings
@@ -13,20 +14,43 @@ class Tasks(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        if not self.check_record.is_running():
-            self.check_record.start()
-        if not self.leave_if_alone.is_running():
-            self.leave_if_alone.start()
-        if not self.music.is_running():
-            self.music.start()
+        tasks_to_start = [
+            self.check_record,
+            self.leave_if_alone,
+            self.music,
+            self.play_random_audio,
+        ]
+        for task in tasks_to_start:
+            if not task.is_running():
+                task.start()
+                logger.info(f"Task iniciada: {task.coro.__name__}")
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=10)
     async def leave_if_alone(self):
         logger.info("Executando task leave_if_alone")
         for vc in self.bot.voice_clients:
             if len(vc.channel.members) == 1:
                 await vc.disconnect()
                 logger.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
+                return
+
+    @tasks.loop(minutes=2)
+    async def play_random_audio(self):
+        logger.info("Executando task play_random_audio")
+
+        if not self.bot.voice_clients:
+            logger.info("Bot não está em nenhum canal de voz")
+            return
+
+        for vc in self.bot.voice_clients:
+            if not vc.is_playing() and random.randint(1, 100) <= 5:
+                audio_path = config.settings.IMG_PATH + "arms.mp3"
+                try:
+                    source = PCMVolumeTransformer(discord.FFmpegPCMAudio(audio_path), volume=0.01)
+                    vc.play(source)
+                    logger.info(f"Tocando áudio {audio_path} no canal de voz: {vc.channel.name}")
+                except Exception as e:
+                    logger.error(f"Erro ao tocar áudio: {e}")
 
     @tasks.loop(minutes=30)
     async def music(self):
