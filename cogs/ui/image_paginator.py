@@ -19,7 +19,7 @@ class ImagePaginator(discord.ui.View):
         self.search_engine = search_engine
         self.time_str = get_timestamp()
 
-    def _build_embed(self) -> discord.Embed:
+    def build_embed(self) -> discord.Embed:
         result = self.results[self.index]
         title = result["title"]
         url = result["link"]
@@ -45,7 +45,7 @@ class ImagePaginator(discord.ui.View):
             except Exception:
                 pass
 
-    def _update_button_states(self):
+    def update_button_states(self):
         for child in self.children:
             if getattr(child, "custom_id", None) == "prev_btn":
                 child.disabled = (self.index == 0)
@@ -56,19 +56,19 @@ class ImagePaginator(discord.ui.View):
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index > 0:
             self.index -= 1
-        self._update_button_states()
+        self.update_button_states()
         await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
     @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index < len(self.results) - 1:
             self.index += 1
-        self._update_button_states()
+        self.update_button_states()
         await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary, custom_id="shuffle_btn")
     async def shuffle_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         import random
         self.index = random.randint(0, len(self.results) - 1)
-        self._update_button_states()
+        self.update_button_states()
         await interaction.response.edit_message(embed=self._build_embed(), view=self)

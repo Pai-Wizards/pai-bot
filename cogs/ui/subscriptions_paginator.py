@@ -5,12 +5,12 @@ from utils.http import logger
 class SubscriptionsPaginator(discord.ui.View):
     def __init__(self, subs_list: List[Dict], author_id: int, timeout: int = 300):
         super().__init__(timeout=timeout)
-        self.subs = subs_list  # lista de dicts com keys: sub (raw subscription), user (dict ou None)
+        self.subs = subs_list
         self.index = 0
         self.author_id = author_id
         self.message: Optional[discord.Message] = None
 
-    def _update_button_states(self):
+    def update_button_states(self):
         for child in self.children:
             if getattr(child, "custom_id", None) == "prev_sub":
                 child.disabled = (self.index == 0)
@@ -43,7 +43,7 @@ class SubscriptionsPaginator(discord.ui.View):
         except Exception:
             pass
 
-    def _build_embed_for_index(self, idx: int) -> discord.Embed:
+    def build_embed_for_index(self, idx: int) -> discord.Embed:
         item = self.subs[idx]
         sub = item.get("sub", {})
         user = item.get("user") or {}
@@ -73,14 +73,14 @@ class SubscriptionsPaginator(discord.ui.View):
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index > 0:
             self.index -= 1
-        self._update_button_states()
-        embed = self._build_embed_for_index(self.index)
+        self.update_button_states()
+        embed = self.build_embed_for_index(self.index)
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_sub")
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index < len(self.subs) - 1:
             self.index += 1
-        self._update_button_states()
-        embed = self._build_embed_for_index(self.index)
+        self.update_button_states()
+        embed = self.build_embed_for_index(self.index)
         await interaction.response.edit_message(embed=embed, view=self)
