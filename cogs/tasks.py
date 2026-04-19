@@ -34,7 +34,7 @@ class Tasks(commands.Cog):
                 logger.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
                 return
 
-    @tasks.loop(minutes=2)
+    @tasks.loop(minutes=10)
     async def play_random_audio(self):
         logger.info("Executando task play_random_audio")
 
