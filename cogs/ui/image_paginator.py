@@ -57,18 +57,18 @@ class ImagePaginator(discord.ui.View):
         if self.index > 0:
             self.index -= 1
         self.update_button_states()
-        await interaction.response.edit_message(embed=self._build_embed(), view=self)
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
     @discord.ui.button(label="Próxima", style=discord.ButtonStyle.primary, custom_id="next_btn")
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index < len(self.results) - 1:
             self.index += 1
         self.update_button_states()
-        await interaction.response.edit_message(embed=self._build_embed(), view=self)
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary, custom_id="shuffle_btn")
     async def shuffle_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         import random
         self.index = random.randint(0, len(self.results) - 1)
         self.update_button_states()
-        await interaction.response.edit_message(embed=self._build_embed(), view=self)
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
