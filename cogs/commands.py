@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from random import choice
 
 import discord
@@ -19,7 +19,6 @@ from config.config_loader import register_media_commands
 from utils.http import fetch_mdn_description, fetch_http_dog_image, logger, xingar, get_timestamp
 from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 
-# novo import e instancia do client Twitch
 from client.twitch_client import TwitchClient
 twitch_client = TwitchClient(config.settings.TWITCH_CLIENT_ID, config.settings.TWITCH_CLIENT_SECRET)
 
@@ -63,23 +62,43 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def join(self, ctx):
-        """Faz o bot entrar no canal de voz do autor do comando."""
         if ctx.author.voice is None:
             await ctx.send("Você não está em um canal de voz. 😿", delete_after=10)
             return
 
         voice_channel = ctx.author.voice.channel
 
-        if ctx.voice_client is not None:
-            await ctx.voice_client.move_to(voice_channel)
-            await self.bot.change_presence(
-                activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
-        else:
-            await voice_channel.connect()
-            await self.bot.change_presence(
-                activity=discord.Activity(name="With Arms Wide Open", type=discord.ActivityType.listening))
+        try:
+            if ctx.voice_client is not None:
+                await ctx.voice_client.disconnect(force=True)
 
-        await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
+            await ctx.guild.change_voice_state(channel=None)
+            await asyncio.sleep(1.5)
+
+            vc = await voice_channel.connect(timeout=20.0, reconnect=False)
+
+            await self.bot.change_presence(
+                activity=discord.Activity(
+                    name="Creed - With Arms Wide Open",
+                    type=discord.ActivityType.listening
+                )
+            )
+            await ctx.send(f'Conectado ao canal de voz: {voice_channel.name}', delete_after=10)
+
+        except discord.errors.ConnectionClosed as e:
+            if e.code == 4006:
+                await ctx.send("Sessão de voz inválida 😿", delete_after=15)
+                if ctx.voice_client:
+                    await ctx.voice_client.disconnect(force=True)
+            else:
+                await ctx.send(f"Erro de conexão (código {e.code}). 😿", delete_after=10)
+
+        except asyncio.TimeoutError:
+            await ctx.send("Timeout 😿", delete_after=10)
+
+        except Exception as e:
+            logger.error(f"Erro ao conectar ao canal de voz: {e}", exc_info=True)
+            await ctx.send("Erro inesperado. 😿", delete_after=10)
 
     @commands.command()
     async def git (self, ctx):
@@ -108,22 +127,30 @@ class Commands(commands.Cog):
         mp3_path = f"{config.settings.IMG_PATH}audio.mp3"
 
         try:
-            source = FFmpegPCMAudio(mp3_path)
-            source = PCMVolumeTransformer(source)
-            source.volume = 0.4
+            import os
+            if not os.path.exists(mp3_path):
+                logger.error(f"Arquivo de áudio não encontrado: {mp3_path}")
+                await ctx.send(f'Arquivo de áudio não encontrado! 😿', delete_after=4)
+                return
+
+            ffmpeg_options = {
+                'options': '-vn -ar 48000 -ac 2 -f s16le'
+            }
+            
+            source = FFmpegPCMAudio(mp3_path, **ffmpeg_options)
+            source = PCMVolumeTransformer(source, volume=0.2)
 
             def after_playback(error):
-                if ctx.voice_client.is_playing():
-                    ctx.voice_client.stop()
                 if error:
-                    logger.info(f'Erro: {error}')
+                    logger.error(f'Erro ao reproduzir áudio: {error}')
                 else:
-                    logger.info('Reprodução finalizada corretamente.', delete_after=10)
+                    logger.info('Reprodução de love finalizada corretamente.')
 
             ctx.voice_client.play(source, after=after_playback)
             await ctx.send(f'Love {ctx.author.mention}!', delete_after=4)
             return
         except Exception as e:
+            logger.error(f'Erro ao reproduzir áudio love: {e}', exc_info=True)
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
 
     @commands.command(name="agro")
@@ -139,22 +166,30 @@ class Commands(commands.Cog):
         mp3_path = f"{config.settings.IMG_PATH}agrochan-love.mp3"
 
         try:
-            source = FFmpegPCMAudio(mp3_path)
-            source = PCMVolumeTransformer(source)
-            source.volume = 0.4
+            import os
+            if not os.path.exists(mp3_path):
+                logger.error(f"Arquivo de áudio não encontrado: {mp3_path}")
+                await ctx.send(f'Arquivo de áudio não encontrado! 😿', delete_after=4)
+                return
+
+            ffmpeg_options = {
+                'options': '-vn -ar 48000 -ac 2 -f s16le'
+            }
+            
+            source = FFmpegPCMAudio(mp3_path, **ffmpeg_options)
+            source = PCMVolumeTransformer(source, volume=0.2)
 
             def after_playback(error):
-                if ctx.voice_client.is_playing():
-                    ctx.voice_client.stop()
                 if error:
-                    ctx.send(f'deu esse erro aqui: {error}', delete_after=10)
+                    logger.error(f'Erro ao reproduzir áudio agro: {error}')
                 else:
-                    ctx.send('Reprodução finalizada corretamente.', delete_after=10)
+                    logger.info('Reprodução de agro finalizada corretamente.')
 
             ctx.voice_client.play(source, after=after_playback)
             await ctx.send(f'🚜 {ctx.author.mention}!', delete_after=4)
             return
         except Exception as e:
+            logger.error(f'Erro ao reproduzir áudio agro: {e}', exc_info=True)
             await ctx.send(f'Ocorreu um erro ao tentar tocar o áudio: {e}', delete_after=4)
 
     @commands.command()
@@ -336,9 +371,9 @@ class Commands(commands.Cog):
                 return
 
         view = ImagePaginator(results, query, ctx, timeout=300, search_engine=local_search_engine)
-        view._update_button_states()
+        view.update_button_states()
 
-        embed = view._build_embed()
+        embed = view.build_embed()
         sent = await ctx.send(embed=embed, view=view)
         view.message = sent
 
@@ -367,9 +402,9 @@ class Commands(commands.Cog):
             ctx,
             search_engine="DuckDuckGo"
         )
-        view._update_button_states()
+        view.update_button_states()
 
-        embed = view._build_embed()
+        embed = view.build_embed()
         sent = await ctx.send(embed=embed, view=view)
         view.message = sent
 
@@ -577,9 +612,9 @@ class Commands(commands.Cog):
             subs_with_users.append({"sub": sub, "user": user})
 
         view = SubscriptionsPaginator(subs_with_users, ctx.author.id)
-        view._update_button_states()
+        view.update_button_states()
 
-        embed = view._build_embed_for_index(0)
+        embed = view.build_embed_for_index(0)
         sent = await ctx.send(embed=embed, view=view)
         view.message = sent
 
