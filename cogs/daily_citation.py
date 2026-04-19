@@ -2,7 +2,7 @@ import json
 import os
 import random
 import logging
-from datetime import date
+from datetime import date, time, timezone, timedelta
 
 from discord.ext import commands, tasks
 import config.settings
@@ -50,8 +50,11 @@ class DailyCitation(commands.Cog):
             self.daily_citation.start()
             self._task_started = True
 
-    @tasks.loop(hours=8)
+    tz = timezone(timedelta(hours=-3))
+
+    @tasks.loop(time=[time(2, 0, tzinfo=tz), time(23, 0, tzinfo=tz)])
     async def daily_citation(self):
+        """Executa às 11:00 e às 23:00 (UTC)."""
         logger.info("Executando daily_citation")
 
         source_channel = self.bot.get_channel(
@@ -72,7 +75,6 @@ class DailyCitation(commands.Cog):
         state = load_state()
         today_str = date.today().isoformat()
 
-        # Se já houver citação hoje, ignora
         if state.get("last_date") == today_str:
             logger.info("Já enviada citação hoje (%s). Ignorando execução.", today_str)
             return
