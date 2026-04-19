@@ -70,7 +70,7 @@ async def search_images(
             last_exc = TimeoutError(f"Timeout após {timeout}s")
             logger.warning("Timeout (tentativa %d/%d)", attempt, retries)
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_exc = exc
             logger.warning("Erro (tentativa %d/%d): %s", attempt, retries, exc)
 
