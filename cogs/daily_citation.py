@@ -52,7 +52,7 @@ class DailyCitation(commands.Cog):
 
     tz = timezone(timedelta(hours=-3))
 
-    @tasks.loop(time=[time(2, 0, tzinfo=tz), time(23, 0, tzinfo=tz)])
+    @tasks.loop(time=[time(11, 0, tzinfo=tz), time(23, 0, tzinfo=tz)])
     async def daily_citation(self):
         """Executa às 11:00 e às 23:00 (UTC)."""
         logger.info("Executando daily_citation")
