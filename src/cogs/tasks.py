@@ -1,18 +1,22 @@
-from discord import PCMVolumeTransformer
-from discord.ext import tasks, commands
-import logging
-import config.settings
-from utils.takes import load_takes_json, days_since_last_take, save_takes_json
 import random
+
 import discord
+from discord import PCMVolumeTransformer
+from discord.ext import tasks
+from discord.ext.commands import Cog
 
-logger = logging.getLogger("bot_logger")
+from cogs import AutoCog
+from config.constants import settings
+from config.take_helper import load_takes_json, days_since_last_take, save_takes_json
+from logger import get_logger
 
-class Tasks(commands.Cog):
+log = get_logger(__name__)
+
+class Tasks(AutoCog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_ready(self):
         tasks_to_start = [
             self.check_record,
@@ -23,38 +27,38 @@ class Tasks(commands.Cog):
         for task in tasks_to_start:
             if not task.is_running():
                 task.start()
-                logger.info(f"Task iniciada: {task.coro.__name__}")
+                log.info(f"Task iniciada: {task.coro.__name__}")
 
     @tasks.loop(minutes=10)
     async def leave_if_alone(self):
-        logger.info("Executando task leave_if_alone")
+        log.info("Executando task leave_if_alone")
         for vc in self.bot.voice_clients:
             if len(vc.channel.members) == 1:
                 await vc.disconnect()
-                logger.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
+                log.info(f"Bot desconectado do canal de voz: {vc.channel.name}")
                 return
 
     @tasks.loop(minutes=10)
     async def play_random_audio(self):
-        logger.info("Executando task play_random_audio")
+        log.info("Executando task play_random_audio")
 
         if not self.bot.voice_clients:
-            logger.info("Bot não está em nenhum canal de voz")
+            log.info("Bot não está em nenhum canal de voz")
             return
 
         for vc in self.bot.voice_clients:
             if not vc.is_playing() and random.randint(1, 100) <= 5:
-                audio_path = config.settings.IMG_PATH + "arms.mp3"
+                audio_path = settings.img_path + "arms.mp3"
                 try:
                     source = PCMVolumeTransformer(discord.FFmpegPCMAudio(audio_path), volume=0.01)
                     vc.play(source)
-                    logger.info(f"Tocando áudio {audio_path} no canal de voz: {vc.channel.name}")
+                    log.info(f"Tocando áudio {audio_path} no canal de voz: {vc.channel.name}")
                 except Exception as e:
-                    logger.error(f"Erro ao tocar áudio: {e}")
+                    log.error(f"Erro ao tocar áudio: {e}")
 
     @tasks.loop(minutes=30)
     async def music(self):
-        logger.info("Excutando Music")
+        log.info("Excutando Music")
         music_array = [
             "Creed - My Sacrifice",
             "Pearl Jam - Black",
@@ -87,8 +91,8 @@ class Tasks(commands.Cog):
 
     @tasks.loop(hours=4)
     async def check_record(self):
-        logger.info("Executando task check_record")
-        channel_id = int(config.settings.ANNOUNCE_CHANNEL_ID)
+        log.info("Executando task check_record")
+        channel_id = settings.announce_channel_id
         if channel_id == 0:
             return
 
