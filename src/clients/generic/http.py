@@ -1,12 +1,13 @@
 import html
 import re
-import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 import aiohttp
 import requests
 
-logger = logging.getLogger("bot_logger")
+from logger import get_logger
+
+log = get_logger(__name__)
 
 
 def get_timestamp() -> str:
@@ -31,22 +32,9 @@ async def fetch_http_dog_image(http, flag):
             description = title if flag else "nao achei no mdn"
             return description, url, image_jpg
     except Exception as e:
-        logger.info(f"Erro ao buscar dados: {e}")
+        log.info(f"Erro ao buscar dados: {e}")
 
     return None, None, None
-
-
-async def fetch_mdn_description(http):
-    url = f'https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/{http}'
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']\s*/?>',
-                          response.content.decode('utf-8', errors='ignore'))
-        if match:
-            description = match.group(1)
-            return html.unescape(description), url
-    return None, url
 
 
 async def fetch_generic_description(http, base_url, pattern):

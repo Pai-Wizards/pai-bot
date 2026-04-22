@@ -1,17 +1,21 @@
 import time
-import requests
 from typing import Optional, Dict
 
+import requests
+
+from config.constants import settings
+
+
 class TwitchClient:
-    def __init__(self, client_id: Optional[str] = None, client_secret: Optional[str] = None):
-        self.client_id = client_id
-        self.client_secret = client_secret
+    def __init__(self):
+        self.client_id = settings.twitch_client_id
+        self.client_secret = settings.twitch_client_secret
         self._token: Optional[str] = None
         self._token_expires_at: float = 0.0
 
     def get_app_access_token(self) -> str:
         """
-        Gera (ou retorna cache) do token de acesso de app (client credentials).
+        Gera (ou retorna cache) do token de acesso de app (clients credentials).
         Exige que client_id e client_secret estejam definidos na instância.
         Retorna o access_token em caso de sucesso; lança RuntimeError em erro.
         """
