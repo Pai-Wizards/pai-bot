@@ -24,7 +24,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=America/Sao_Paulo
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg libopus-dev locales curl && \
+    ffmpeg libopus-dev locales && \
     rm -rf /var/lib/apt/lists/* && \
     sed -i '/pt_BR.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
@@ -37,6 +37,6 @@ COPY --chown=botuser:botuser . .
 USER botuser
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:8080/health
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
 
-ENTRYPOINT ["python", "bot.py"]
+ENTRYPOINT ["python", "__main__.py"]
