@@ -61,6 +61,13 @@
       "custom_message": "pow, filhao"
     },
     {
+      "name": "elab",
+      "enabled": true,
+      "keywords": ["não vou elaborar", "nao vou elaborar", "não dá pra elaborar", "nao quero elaborar"],
+      "image_name": "elab.jpg",
+      "custom_message": "Elabora ai!"
+    },
+    {
       "name": "java",
       "enabled": true,
       "keywords": ["java"],
