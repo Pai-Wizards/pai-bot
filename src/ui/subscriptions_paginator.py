@@ -1,6 +1,10 @@
-import discord
 from typing import List, Dict, Optional
-from utils.http import logger
+
+import discord
+
+from logger import get_logger
+
+log = get_logger(__name__)
 
 class SubscriptionsPaginator(discord.ui.View):
     def __init__(self, subs_list: List[Dict], author_id: int, timeout: int = 300):
@@ -25,7 +29,7 @@ class SubscriptionsPaginator(discord.ui.View):
             try:
                 await self.message.edit(view=self)
             except Exception:
-                logger.exception("Falha ao atualizar mensagem na timeout do paginator")
+                log.exception("Falha ao atualizar mensagem após timeout do paginator de subscriptions")
 
         try:
             self.message = None

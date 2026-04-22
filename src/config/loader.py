@@ -1,22 +1,27 @@
 import json
-import logging
 import os
+from pathlib import Path
 
 import discord
 
-import config.settings
+import config.constants
+from logger import get_logger
 
-logger = logging.getLogger("bot_logger")
+log = get_logger(__name__)
+
+# Diretório de configurações (config/ está no mesmo nível de src/)
+CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
 
 def load_config():
-    if os.path.exists("pai_config.json"):
-        with open(config.settings.CONFIG_FILE, "r") as file:
-            logger.info("Arquivo de configuração 'pai_config.json' encontrado.")
+    config_path = CONFIG_DIR / config.constants.CONFIG_FILE
+    if config_path.exists():
+        with open(config_path, "r", encoding="utf-8") as file:
+            log.info("Arquivo de configuração encontrado em '%s'", config_path)
             return json.load(file)
     else:
-        logger.error("Arquivo de configuração 'pai_config.json' não encontrado.")
-        raise FileNotFoundError("Arquivo de configuração 'pai_config.json' não encontrado.")
+        log.error("Arquivo de configuração não encontrado em '%s'", config_path)
+        raise FileNotFoundError(f"Arquivo de configuração não encontrado em '{config_path}'")
 
 
 def create_almoco_config(config):
@@ -29,21 +34,22 @@ def create_almoco_config(config):
     }
 
 
-with open("media_commands.json", "r", encoding="utf-8") as f:
+media_commands_path = CONFIG_DIR / "media_commands.json"
+with open(media_commands_path, "r", encoding="utf-8") as f:
     MEDIA_COMMANDS = json.load(f)
 
 
 def register_media_commands(self):
     for cmd_name, cmd_data in MEDIA_COMMANDS.items():
-        logger.info(f"Carregando Comando: ({cmd_name})")
+        log.info("Registrando comando de mídia: %s -> %s", cmd_name, cmd_data['file'])
 
-        async def _command_template(ctx, file_name=cmd_data["file"], description=cmd_data.get("description", "")):
-            img_path = os.path.join(config.settings.IMG_PATH, file_name)
+        async def _command_template(ctx, file_name=cmd_data["file"]):
+            img_path = os.path.join(config.constants.settings.img_path, file_name)
             try:
                 with open(img_path, "rb") as f:
                     await ctx.send(file=discord.File(f))
             except Exception as e:
-                logger.error(f"Erro ao enviar arquivo ({file_name}): {e}")
+                log.error("Erro ao enviar arquivo (%s): %s", file_name, e)
                 await ctx.send(f"Não consegui enviar {cmd_name}")
 
         self.bot.command(name=cmd_name)(_command_template)

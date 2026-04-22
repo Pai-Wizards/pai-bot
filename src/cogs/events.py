@@ -1,28 +1,30 @@
 import datetime
 import random
 import re
-import logging
 from collections import defaultdict
 
 import discord
-from discord.ext import commands
+from discord.ext.commands import Cog
 
-import config.settings
+from clients.generic.http import xingar
+from cogs import AutoCog
+from config.constants import settings
+from logger import get_logger
 from utils.cooldown import on_cooldown
-from utils.http import xingar
 
-logger = logging.getLogger("bot_logger")
+logger = get_logger(__name__)
+
 
 def flood_msg_check():
     return random.randint(1, 11) == 1
 
 
-class Events(commands.Cog):
+class Events(AutoCog):
     def __init__(self, bot):
         self.bot = bot
         self.deleted_messages = defaultdict(list)
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message_delete(self, message):
         if isinstance(message.channel, discord.TextChannel):
             user_id = message.author.id
@@ -38,40 +40,40 @@ class Events(commands.Cog):
             ]
 
             if len(self.deleted_messages[user_id]) >= 3:
-                img_path = config.settings.IMG_PATH + "delete.jpg"
+                img_path = settings.img_path + "delete.jpg"
                 try:
                     with open(img_path, "rb") as image_file:
-                        logger.info(f"Enviando imagem {img_path} devido a deleção excessiva de mensagens por {message.author} no canal {message.channel.name}")
+                        logger.info("Enviando imagem %s devido a deleção excessiva de mensagens por %s no canal %s", img_path, message.author, message.channel.name)
                         self.deleted_messages[user_id].clear()
                         alert_channel = message.channel
                         await alert_channel.send(f"{message.author.mention}  Começou com deletepill", file=discord.File(image_file), delete_after=10)
                 except Exception as e:
-                    logger.error(f"Erro ao enviar imagem de alerta: {e}")
+                    logger.error("Erro ao enviar imagem de alerta: %s", e)
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message(self, message):
         if message.author == self.bot.user or message.content.startswith("!"):
             return
 
         if "@everyone" in message.content or "@here" in message.content:
-            logger.warning(f"Menção inválida por {message.author} em {message.guild}")
+            logger.warning("Menção inválida por %s em %s", message.author, message.guild)
             return
 
         for config_instance in self.bot.configs_list.get("configs_list", []):
             if config_instance["enabled"]:
                 keywords_regex = r"\b(?:{})\b".format("|".join(config_instance["keywords"]))
                 if re.search(keywords_regex, message.content.lower()) and not on_cooldown(message.author.id, self.bot.configs_list["cooldown"]):
-                    img_path = config.settings.IMG_PATH + config_instance["image_name"]
+                    img_path = settings.img_path + config_instance["image_name"]
                     try:
                         with open(img_path, "rb") as image_file:
-                            logger.info(f"Palavra-chave detectada: {config_instance['name']} no canal {message.channel.name}")
+                            logger.info("Palavra-chave detectada: %s no canal %s", config_instance['name'], message.channel.name)
                             await message.reply(config_instance["custom_message"], file=discord.File(image_file))
                     except Exception as e:
-                        logger.error(f"Erro ao enviar imagem associada à palavra-chave: {e}")
+                        logger.error("Erro ao enviar imagem associada à palavra-chave: %s", e)
                     return
 
         if self.bot.user.mentioned_in(message):
-            logger.info(f"Bot mencionado por {message.author} no canal {message.channel.name}")
+            logger.info("Bot mencionado por %s no canal %s", message.author, message.channel.name)
 
             if random.random() < 0.9:
                 return

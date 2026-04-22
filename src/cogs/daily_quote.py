@@ -1,16 +1,18 @@
 import json
 import os
 import random
-import logging
 from datetime import date, time, timezone, timedelta
 
-from discord.ext import commands, tasks
-import config.settings
+from discord.ext import tasks
+from discord.ext.commands import Cog
 
-logger = logging.getLogger("bot_logger")
+from cogs import AutoCog
+from config.constants import settings
+from logger import get_logger
+
+log = get_logger(__name__)
 
 STATE_FILE = "daily_citation_state.json"
-
 
 def load_state():
     """Retorna dict com keys: last_message_id (int|None) e last_date (YYYY-MM-DD|None)."""
@@ -24,7 +26,7 @@ def load_state():
                 "last_date": data.get("last_date"),
             }
     except Exception as e:
-        logger.error("Erro ao carregar estado: %s", e)
+        log.error("Erro ao carregar estado: %s", e)
         return {"last_message_id": None, "last_date": None}
 
 
@@ -33,20 +35,20 @@ def save_state(message_id: int, date_str: str):
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump({"last_message_id": message_id, "last_date": date_str}, f)
     except Exception as e:
-        logger.error("Erro ao salvar estado: %s", e)
+        log.error("Erro ao salvar estado: %s", e)
 
 
-class DailyCitation(commands.Cog):
+class DailyCitation(AutoCog):
 
     def __init__(self, bot):
         self.bot = bot
         self._task_started = False
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_ready(self):
         """Inicia a task quando o bot estiver pronto e conectado."""
         if not self._task_started:
-            logger.info("Bot pronto! Iniciando task daily_citation...")
+            log.info("Bot pronto! Iniciando task daily_citation...")
             self.daily_citation.start()
             self._task_started = True
 
@@ -55,28 +57,24 @@ class DailyCitation(commands.Cog):
     @tasks.loop(time=[time(11, 0, tzinfo=tz), time(23, 0, tzinfo=tz)])
     async def daily_citation(self):
         """Executa às 11:00 e às 23:00 (UTC)."""
-        logger.info("Executando daily_citation")
+        log.info("Executando daily_citation")
 
-        source_channel = self.bot.get_channel(
-            int(config.settings.CITATION)
-        )
-        target_channel = self.bot.get_channel(
-            int(config.settings.ANNOUNCE_CHANNEL_ID)
-        )
+        source_channel = self.bot.get_channel(settings.citation)
+        target_channel = self.bot.get_channel(settings.announce_channel_id)
 
         if source_channel is None:
-            logger.error("Canal de citações (CITATION) não encontrado")
+            log.error("Canal de citações (CITATION) não encontrado")
             return
 
         if target_channel is None:
-            logger.error("Canal de anúncio (ANNOUNCE_CHANNEL_ID) não encontrado")
+            log.error("Canal de anúncio (ANNOUNCE_CHANNEL_ID) não encontrado")
             return
 
         state = load_state()
         today_str = date.today().isoformat()
 
         if state.get("last_date") == today_str:
-            logger.info("Já enviada citação hoje (%s). Ignorando execução.", today_str)
+            log.info("Já enviada citação hoje (%s). Ignorando execução.", today_str)
             return
 
         last_id = state.get("last_message_id")
@@ -98,7 +96,7 @@ class DailyCitation(commands.Cog):
                 chosen = msg
 
         if chosen is None:
-            logger.warning("Nenhuma citação válida encontrada")
+            log.warning("Nenhuma citação válida encontrada")
             return
 
         prefix_text = (
@@ -110,7 +108,7 @@ class DailyCitation(commands.Cog):
         await target_channel.send(f"{prefix_text}{chosen.content}")
         save_state(chosen.id, today_str)
 
-        logger.info(
+        log.info(
             "Citação enviada (msg_id=%s, total_validas=%d, date=%s)",
             chosen.id,
             count,
@@ -119,9 +117,9 @@ class DailyCitation(commands.Cog):
 
     @daily_citation.before_loop
     async def before_daily_citation(self):
-        logger.info("Aguardando bot ficar pronto antes de iniciar daily_citation...")
+        log.info("Aguardando bot ficar pronto antes de iniciar daily_citation...")
         await self.bot.wait_until_ready()
-        logger.info("Bot pronto! Iniciando daily_citation loop...")
+        log.info("Bot pronto! Iniciando daily_citation loop...")
 
     def cog_unload(self):
         self.daily_citation.cancel()
@@ -130,4 +128,4 @@ class DailyCitation(commands.Cog):
 async def setup(bot):
     cog = DailyCitation(bot)
     await bot.add_cog(cog)
-    logger.info("Cog DailyCitation carregado (task será iniciada quando bot estiver pronto)")
+    log.info("Cog DailyCitation carregado (task será iniciada quando bot estiver pronto)")
