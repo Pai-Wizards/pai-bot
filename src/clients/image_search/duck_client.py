@@ -4,12 +4,13 @@ image_search.py — busca de imagens via DuckDuckGo.
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import Final, TypedDict
 
 from ddgs import DDGS
 
-logger = logging.getLogger("bot_logger")
+from logger import get_logger
+
+log = get_logger(__name__)
 
 _DEFAULT_TIMEOUT: Final[float] = 15.0
 _MAX_RETRIES: Final[int] = 3
@@ -51,10 +52,10 @@ async def search_images(
         Lista de dicts com ``title`` e ``link``. Vazia em caso de falha.
     """
     if not query or not query.strip():
-        logger.warning("search_images chamado com query vazia — abortando.")
+        log.warning("search_images chamado com query vazia — abortando.")
         return []
 
-    logger.info("Buscando imagens: %r (max=%d)", query, max_results)
+    log.info("Buscando imagens: %r (max=%d)", query, max_results)
     last_exc: BaseException | None = None
 
     for attempt in range(1, retries + 1):
@@ -63,19 +64,19 @@ async def search_images(
                 asyncio.to_thread(_search_sync, query, max_results),
                 timeout=timeout,
             )
-            logger.info("%d imagem(ns) retornada(s) para %r", len(results), query)
+            log.info("%d imagem(ns) retornada(s) para %r", len(results), query)
             return results
 
         except TimeoutError:
             last_exc = TimeoutError(f"Timeout após {timeout}s")
-            logger.warning("Timeout (tentativa %d/%d)", attempt, retries)
+            log.warning("Timeout (tentativa %d/%d)", attempt, retries)
 
         except Exception as exc:
             last_exc = exc
-            logger.warning("Erro (tentativa %d/%d): %s", attempt, retries, exc)
+            log.warning("Erro (tentativa %d/%d): %s", attempt, retries, exc)
 
         if attempt < retries:
             await asyncio.sleep(_RETRY_BASE_DELAY * (2 ** (attempt - 1)))
 
-    logger.error("Todas as tentativas falharam para %r: %s", query, last_exc)
+    log.error("Todas as tentativas falharam para %r: %s", query, last_exc)
     return []

@@ -1,10 +1,12 @@
-import discord
-import logging
 from urllib.parse import urlparse
 
-from utils.http import get_timestamp
+import discord
 
-logger = logging.getLogger("bot_logger")
+from clients.generic.http import get_timestamp
+from logger import get_logger
+
+log = get_logger(__name__)
+
 
 class ImagePaginator(discord.ui.View):
     def __init__(self, results, query, ctx, timeout=300, search_engine="DuckDuckGo"):
