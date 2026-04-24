@@ -36,6 +36,8 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY --chown=botuser:botuser . .
 
+RUN chmod 755 /app/config && chmod u+w /app/config/*.json
+
 USER botuser
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
