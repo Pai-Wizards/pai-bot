@@ -1,27 +1,24 @@
 import asyncio
 import locale
 import os
-import sys
 from pathlib import Path
 
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from cogs import AutoCog
-from logger import get_logger
 
+from .logger import get_logger
+from .cogs import AutoCog
+from .config import loader as cl
+from .config.constants import settings
+from .server import NotificationServer
 
 src_path = Path(__file__).parent
-sys.path.insert(0, str(src_path))
-
 env_path = src_path.parent / '.env'
 load_dotenv(env_path)
 
 os.chdir(src_path.parent)
 
-from config import loader as cl
-from config.constants import settings
-from server import NotificationServer
 
 
 logger = get_logger(__name__)
