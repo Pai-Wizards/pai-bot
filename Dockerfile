@@ -2,7 +2,8 @@ FROM python:3.11-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc python3-dev build-essential libffi-dev libssl-dev \
@@ -21,7 +22,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     LANG=pt_BR.UTF-8 \
     LC_ALL=pt_BR.UTF-8 \
-    TZ=America/Sao_Paulo
+    TZ=America/Sao_Paulo \
+    DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg libopus-dev locales && \
