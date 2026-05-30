@@ -32,13 +32,19 @@ class TwitchClient:
             "grant_type": "client_credentials",
         }
 
-        resp = requests.post(url, params=params, timeout=10)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Falha ao obter token Twitch: {resp.status_code} {resp.text}")
+        try:
+            resp = requests.post(url, params=params, timeout=10)
+            resp.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(f"Erro de conexão ao obter token Twitch: {e}") from e
 
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as e:
+            raise RuntimeError(f"Resposta inválida da Twitch (não é JSON): {resp.text}") from e
+
         access_token = data.get("access_token")
-        expires_in = data.get("expires_in", 0)
+        expires_in = max(data.get("expires_in", 3600), 60)
 
         if not access_token:
             raise RuntimeError(f"Resposta inesperada ao obter token: {data}")
@@ -73,7 +79,11 @@ class TwitchClient:
         if resp.status_code != 200:
             raise RuntimeError(f"Falha ao buscar usuário Twitch: {resp.status_code} {resp.text}")
 
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as e:
+            raise RuntimeError(f"Resposta inválida da Twitch (não é JSON): {resp.text}") from e
+
         items = data.get("data", [])
         if not items:
             return None
@@ -147,7 +157,12 @@ class TwitchClient:
             resp = requests.get(url, headers=headers, params=params, timeout=10)
             if resp.status_code != 200:
                 raise RuntimeError(f"Falha ao listar EventSub: {resp.status_code} {resp.text}")
-            data = resp.json()
+
+            try:
+                data = resp.json()
+            except ValueError as e:
+                raise RuntimeError(f"Resposta inválida da Twitch (não é JSON): {resp.text}") from e
+
             items = data.get("data", [])
             all_items.extend(items)
 
