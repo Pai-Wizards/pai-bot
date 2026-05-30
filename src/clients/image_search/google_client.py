@@ -1,10 +1,9 @@
 import asyncio
 import os
-from io import BytesIO
+from collections import OrderedDict
 from urllib.parse import urlparse, quote_plus
 
 import aiohttp
-from PIL import Image
 
 from logger import get_logger
 
@@ -13,6 +12,46 @@ log = get_logger(__name__)
 VALID_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff"}
 MIN_IMAGE_SIZE_BYTES = 10 * 1024
 PROBLEM_DOMAINS = {"instagram.com", "lookaside.instagram.com"}
+
+
+class LimitedURLCache:
+    """Cache LRU para URLs com limite de memória."""
+
+    def __init__(self, maxsize: int = 300):
+        self.cache: OrderedDict = OrderedDict()
+        self.maxsize = maxsize
+
+    def get(self, url: str) -> bool | None:
+        return self.cache.get(url)
+
+    def add(self, url: str, valid: bool) -> None:
+        if url in self.cache:
+            del self.cache[url]
+        elif len(self.cache) >= self.maxsize:
+            self.cache.popitem(last=False)
+        self.cache[url] = valid
+
+
+class LimitedQueryCache:
+    """Cache LRU para queries de busca."""
+
+    def __init__(self, maxsize: int = 50):
+        self.cache: OrderedDict = OrderedDict()
+        self.maxsize = maxsize
+
+    def get(self, query: str) -> list | None:
+        return self.cache.get(query)
+
+    def add(self, query: str, results: list) -> None:
+        if query in self.cache:
+            del self.cache[query]
+        elif len(self.cache) >= self.maxsize:
+            self.cache.popitem(last=False)
+        self.cache[query] = results
+
+
+_url_cache = LimitedURLCache(maxsize=300)
+_query_cache = LimitedQueryCache(maxsize=50)
 
 
 def is_valid_image_url(url: str) -> bool:
@@ -42,8 +81,15 @@ async def verify_image_accessibility(
     timeout: int = 3,
     semaphore: asyncio.Semaphore | None = None,
 ) -> bool:
+    # Verificar cache primeiro
+    cached = _url_cache.get(url)
+    if cached is not None:
+        return cached
+
     async def _inner() -> bool:
-        return await _verify_image_lightweight(session, url, timeout=timeout)
+        result = await _verify_image_lightweight(session, url, timeout=timeout)
+        _url_cache.add(url, result)
+        return result
 
     if semaphore is not None:
         async with semaphore:
@@ -54,10 +100,11 @@ async def verify_image_accessibility(
 async def _verify_image_lightweight(
     session: aiohttp.ClientSession,
     url: str,
-    timeout: int = 3,
+    timeout: int = 2,
 ) -> bool:
+    """Verifica imagem apenas com HEAD (sem GET parcial para economia de memória)."""
     if is_problem_domain(url):
-        log.debug("Ignorando domínio problemático em URL: %s", url)
+        log.debug("Ignorando domínio problemático: %s", url)
         return False
 
     try:
@@ -66,137 +113,48 @@ async def _verify_image_lightweight(
             timeout=timeout,
             allow_redirects=True,
             ssl=False,
-        ) as head_resp:
-            status = head_resp.status
-            if status == 200:
-                ct = head_resp.headers.get("Content-Type", "").lower()
-                cl = head_resp.headers.get("Content-Length")
-
-                if not ct.startswith("image/"):
-                    log.debug("HEAD rejeitado por Content-Type (%s): %s", ct, url)
-                    return False
-
-                if cl is not None:
-                    try:
-                        size = int(cl)
-                        if size < MIN_IMAGE_SIZE_BYTES:
-                            log.debug(
-                                "HEAD rejeitado por Content-Length (%d < %d): %s",
-                                size,
-                                MIN_IMAGE_SIZE_BYTES,
-                                url,
-                            )
-                            return False
-                    except ValueError:
-                        log.debug("Content-Length inválido em HEAD: %s", cl)
-
-                return True
-
-            if status in (403, 405):
-                log.debug("HEAD não suportado (%d), tentando GET parcial: %s", status, url)
-                return await _verify_with_partial_get(session, url, timeout)
-
-            log.debug("HEAD retornou status %d para %s", status, url)
-            return False
-    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-        log.debug("Falha em HEAD para %s: %s", url, type(e).__name__)
-        return False
-    except Exception as e:
-        log.debug("Erro inesperado em HEAD para %s: %s", url, type(e).__name__)
-        return False
-
-
-async def _verify_with_partial_get(
-    session: aiohttp.ClientSession,
-    url: str,
-    timeout: int = 3,
-) -> bool:
-    headers = {"Range": "bytes=0-4095"}
-    try:
-        async with session.get(
-            url,
-            timeout=timeout,
-            allow_redirects=True,
-            ssl=False,
-            headers=headers,
         ) as resp:
-            if resp.status not in (200, 206):
-                log.debug("GET parcial status %d para %s", resp.status, url)
-                return False
-
-            ct = resp.headers.get("Content-Type", "").lower()
-            if not ct.startswith("image/"):
-                log.debug("GET parcial rejeitado por Content-Type (%s): %s", ct, url)
-                return False
-
-            chunk = await resp.content.read(4096)
-            if not chunk or len(chunk) < 2048:
-                log.debug("GET parcial retornou chunk muito pequeno (%d bytes): %s", len(chunk), url)
-                return False
-
-            try:
-                img = Image.open(BytesIO(chunk))
-                img.load()
-            except Exception as e:
-                log.debug("Chunk inicial não parece uma imagem válida (%s): %s", type(e).__name__, url)
-                return False
-
-            return True
-
-    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-        log.debug("Falha em GET parcial para %s: %s", url, type(e).__name__)
-        return False
-    except Exception as e:
-        log.debug("Erro inesperado em GET parcial para %s: %s", url, type(e).__name__)
-        return False
-
-
-async def validate_cors_and_format(session: aiohttp.ClientSession, url: str, timeout: int = 5) -> bool:
-    try:
-        async with session.get(url, timeout=timeout, allow_redirects=True, ssl=False) as resp:
             if resp.status != 200:
-                return False
-
-            content = await resp.read()
-            if not content:
-                return False
-
-            try:
-                img = Image.open(BytesIO(content))
-                img.load()
-                fmt = (img.format or "").upper()
-            except Exception as e:
-                log.debug("Formato de imagem inválido em %s: %s", url, type(e).__name__)
+                log.debug("HEAD status %d para %s", resp.status, url)
                 return False
 
             ct = resp.headers.get("Content-Type", "").lower()
             if not ct.startswith("image/"):
-                log.debug("Content-Type inválido: %s", ct)
+                log.debug("Content-Type inválido (%s) para %s", ct, url)
                 return False
 
-            parsed = urlparse(url)
-            path = parsed.path or ""
-            ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
-
-            if fmt == "BMP":
-                if ext in ("jpg", "jpeg") or "jpeg" in ct or "jpg" in ct:
-                    log.debug("Rejeitando imagem BMP servida como JPEG/JPG: %s", url)
-                    return False
+            cl = resp.headers.get("Content-Length")
+            if cl is not None:
+                try:
+                    size = int(cl)
+                    if size < MIN_IMAGE_SIZE_BYTES:
+                        log.debug("Imagem muito pequena (%d bytes) para %s", size, url)
+                        return False
+                except ValueError:
+                    pass
 
             return True
-    except (asyncio.TimeoutError, aiohttp.ClientError):
+
+    except asyncio.TimeoutError:
+        log.debug("Timeout em HEAD para %s", url)
         return False
-    except Exception as e:
-        log.debug("Erro ao validar CORS e formato %s: %s", url, type(e).__name__)
+    except (aiohttp.ClientError, Exception) as e:
+        log.debug("Erro em HEAD para %s: %s", url, type(e).__name__)
         return False
 
 
 async def filter_valid_images(
     session: aiohttp.ClientSession,
     items: list,
+    max_needed: int = 30,
     semaphore: asyncio.Semaphore | None = None,
 ) -> list:
-    candidates: list[dict] = []
+    """Filtra imagens válidas com lazy loading (retorna assim que tiver suficiente)."""
+    if not items:
+        return []
+
+    # Pré-filtrar links válidos e domínios problemáticos
+    candidates = []
     for item in items:
         link = item.get("link")
         title = item.get("title", "Sem título")
@@ -208,37 +166,27 @@ async def filter_valid_images(
         if not link or not is_valid_image_url(link):
             continue
 
-        candidates.append({"title": title, "link": link, "item": item})
+        candidates.append((link, title))
 
     if not candidates:
         return []
 
     if semaphore is None:
-        semaphore = asyncio.Semaphore(5)
+        semaphore = asyncio.Semaphore(3)
 
-    verification_tasks = [
-        _verify_item(session, item, semaphore) for item in candidates
-    ]
+    results = []
 
-    results = await asyncio.gather(*verification_tasks, return_exceptions=False)
-    return [r for r in results if r is not None]
+    # Lazy loading: verificar até conseguir max_needed resultados válidos
+    for link, title in candidates:
+        if len(results) >= max_needed:
+            break
+
+        if await verify_image_accessibility(session, link, timeout=2, semaphore=semaphore):
+            results.append({"title": title, "link": link})
+
+    return results
 
 
-async def _verify_item(
-    session: aiohttp.ClientSession,
-    item: dict,
-    semaphore: asyncio.Semaphore,
-):
-    link = item["link"]
-
-    if not await verify_image_accessibility(session, link, semaphore=semaphore):
-        return None
-
-    if not await validate_cors_and_format(session, link, timeout=5):
-        log.debug("Imagem rejeitada por CORS ou formato inválido: %s", link)
-        return None
-
-    return {"title": item["title"], "link": link}
 
 
 def build_google_cse_url(api_key: str, cx: str, query: str, num: int, start: int) -> str:
@@ -269,6 +217,13 @@ async def handle_spelling_correction(data: dict, query: str, corrected_query_use
 
 
 async def search_images_google(query, max_results=30):
+    """Busca imagens com cache por query e connection pooling otimizado."""
+    # Verificar cache de query primeiro
+    cached_results = _query_cache.get(query)
+    if cached_results is not None:
+        log.info("Retornando %d imagens do cache para query: %s", len(cached_results), query)
+        return cached_results
+
     api_key = os.getenv("GOOGLE_API_KEY")
     cx = os.getenv("GOOGLE_CX")
     if not api_key or not cx:
@@ -278,12 +233,15 @@ async def search_images_google(query, max_results=30):
     per_request = 10
     start = 1
     corrected_query_used = False
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(3)
     max_retries = 2
     retry_delay = 2
 
+    # Connection pooling otimizado
+    connector = aiohttp.TCPConnector(limit=10, limit_per_host=5, ttl_dns_cache=300)
+
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=connector) as session:
             while len(results) < max_results:
                 to_request = min(per_request, max_results - len(results))
                 url = build_google_cse_url(api_key, cx, query, to_request, start)
@@ -291,10 +249,10 @@ async def search_images_google(query, max_results=30):
                 retries = 0
                 while retries < max_retries:
                     try:
-                        async with session.get(url, timeout=10) as resp:
+                        async with session.get(url, timeout=5) as resp:  # Timeout Google: 5s
                             if resp.status == 429:
                                 wait_time = retry_delay * (2 ** retries)
-                                log.warning("Rate limited (429). Aguardando %ss antes de retry...", wait_time)
+                                log.warning("Rate limited. Aguardando %ds...", wait_time)
                                 await asyncio.sleep(wait_time)
                                 retries += 1
                                 continue
@@ -316,20 +274,25 @@ async def search_images_google(query, max_results=30):
                             if not items:
                                 break
 
-                            valid_images = await filter_valid_images(session, items, semaphore)
+                            # Lazy loading: parar quando tiver suficiente
+                            valid_images = await filter_valid_images(
+                                session, items, max_needed=max_results - len(results), semaphore=semaphore
+                            )
                             results.extend(valid_images)
+
+                            # Parar se já temos suficiente
+                            if len(results) >= max_results:
+                                break
 
                             start += len(items)
                             if len(items) < to_request:
                                 break
 
-                            await asyncio.sleep(0.5)
+                            await asyncio.sleep(0.05)  # Sleep mínimo
                             break
 
                     except asyncio.TimeoutError:
-                        log.warning(
-                            "Timeout na requisição. Retry %s/%s", retries + 1, max_retries
-                        )
+                        log.warning("Timeout na requisição Google. Retry %s/%s", retries + 1, max_retries)
                         retries += 1
                         if retries < max_retries:
                             await asyncio.sleep(retry_delay)
@@ -338,11 +301,15 @@ async def search_images_google(query, max_results=30):
                         break
 
                 if retries >= max_retries:
-                    log.error("Máximo de retries atingido. Abortando busca.")
+                    log.error("Máximo de retries atingido.")
                     break
 
     except Exception as e:
         log.error("Erro ao buscar imagens via Google CSE: %s", e)
+
+    # Cachear resultados
+    if results:
+        _query_cache.add(query, results)
 
     return results
 
