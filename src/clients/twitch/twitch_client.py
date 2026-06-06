@@ -4,6 +4,12 @@ from typing import Optional, Dict
 import requests
 
 from config.constants import settings
+from logger import get_logger
+
+log = get_logger(__name__)
+
+# Buffer de renovação de token (em segundos)
+TOKEN_REFRESH_BUFFER = 120
 
 
 class TwitchClient:
@@ -13,17 +19,30 @@ class TwitchClient:
         self._token: Optional[str] = None
         self._token_expires_at: float = 0.0
 
-    def get_app_access_token(self) -> str:
+    def _needs_token_refresh(self) -> bool:
+        """Verifica se token precisa ser renovado."""
+        return not self._token or time.time() >= self._token_expires_at
+
+    def get_app_access_token(self, force_refresh: bool = False) -> str:
         """
         Gera (ou retorna cache) do token de acesso de app (clients credentials).
-        Exige que client_id e client_secret estejam definidos na instância.
+
+        Args:
+            force_refresh: Se True, força renovação do token sem verificar cache
+
         Retorna o access_token em caso de sucesso; lança RuntimeError em erro.
         """
         if not self.client_id or not self.client_secret:
             raise RuntimeError("client_id e client_secret precisam ser configurados")
 
-        if self._token and time.time() < self._token_expires_at:
+        if not force_refresh and not self._needs_token_refresh():
+            log.debug("Token de Twitch ainda válido. Expires at: %s", self._token_expires_at)
             return self._token
+
+        if force_refresh:
+            log.info("Forçando renovação de token Twitch...")
+        else:
+            log.info("Token Twitch expirou. Renovando...")
 
         url = "https://id.twitch.tv/oauth2/token"
         params = {
@@ -50,7 +69,8 @@ class TwitchClient:
             raise RuntimeError(f"Resposta inesperada ao obter token: {data}")
 
         self._token = access_token
-        self._token_expires_at = time.time() + int(expires_in) - 30
+        self._token_expires_at = time.time() + int(expires_in) - TOKEN_REFRESH_BUFFER
+        log.info("Token Twitch renovado. Expira em %.0f segundos", int(expires_in))
         return self._token
 
     def get_user(self, login_or_id: str) -> Optional[Dict[str, Optional[str]]]:
@@ -76,6 +96,14 @@ class TwitchClient:
             params["login"] = login_or_id.lower()
 
         resp = requests.get(url, headers=headers, params=params, timeout=10)
+
+        # Se 401, renovar token e tentar novamente
+        if resp.status_code == 401:
+            log.warning("Token expirou ao buscar usuário Twitch. Renovando...")
+            token = self.get_app_access_token(force_refresh=True)
+            headers["Authorization"] = f"Bearer {token}"
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+
         if resp.status_code != 200:
             raise RuntimeError(f"Falha ao buscar usuário Twitch: {resp.status_code} {resp.text}")
 
@@ -95,7 +123,7 @@ class TwitchClient:
             "id": user.get("id"),
             "login": user.get("login"),
             "display_name": user.get("display_name"),
-            "description": user.get("description"),  # ADICIONADO
+            "description": user.get("description"),
         }
 
     def subscribe_eventsub(self, broadcaster_user_id: str, callback_url: str, secret: Optional[str] = None) -> Dict:
@@ -122,6 +150,13 @@ class TwitchClient:
         }
 
         resp = requests.post(url, headers=headers, json=body, timeout=10)
+
+        # Se 401, renovar token e tentar novamente
+        if resp.status_code == 401:
+            log.warning("Token expirou ao criar subscription EventSub. Renovando...")
+            token = self.get_app_access_token(force_refresh=True)
+            headers["Authorization"] = f"Bearer {token}"
+            resp = requests.post(url, headers=headers, json=body, timeout=10)
 
         # Trata caso onde já existe subscription (409) sem lançar
         if resp.status_code == 409:
@@ -153,8 +188,19 @@ class TwitchClient:
 
         all_items = []
         params = {}
+        token_refreshed = False
+
         while True:
             resp = requests.get(url, headers=headers, params=params, timeout=10)
+
+            # Se 401, renovar token UMA VEZ e tentar novamente
+            if resp.status_code == 401 and not token_refreshed:
+                log.warning("Token expirou ao listar EventSub subscriptions. Renovando...")
+                token = self.get_app_access_token(force_refresh=True)
+                headers["Authorization"] = f"Bearer {token}"
+                token_refreshed = True
+                resp = requests.get(url, headers=headers, params=params, timeout=10)
+
             if resp.status_code != 200:
                 raise RuntimeError(f"Falha ao listar EventSub: {resp.status_code} {resp.text}")
 
@@ -173,4 +219,5 @@ class TwitchClient:
                 continue
             break
 
+        log.info("EventSub subscriptions listadas com sucesso. Total: %d", len(all_items))
         return {"total": len(all_items), "data": all_items}
